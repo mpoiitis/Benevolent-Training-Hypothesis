@@ -314,8 +314,7 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
             biases.append(bias)
             lrs.append(lr)
             errors.append(error)
-            lipschitzs.append(lipschitz
-                              )
+            lipschitzs.append(lipschitz)
         # convert to numpy for ease
         biases = np.array(biases)
         lrs = np.array(lrs)
@@ -326,13 +325,14 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
         mean_biases = np.mean(biases, axis=0)
         mean_lrs = np.mean(lrs, axis=0)
         mean_errors = np.mean(errors, axis=0)
+        mean_lipschitzs = np.mean(lipschitzs, axis=0)
 
         # create the utmost dictionary for each freq
         bias_files[freq] = mean_biases
         lr_files[freq] = mean_lrs
         error_files[freq] = mean_errors
+        lipschitz_files[freq] = mean_lipschitzs
 
-        lipschitz_files[freq] = lipschitzs
         raw_bias[freq] = biases
         raw_lr[freq] = lrs
 
@@ -374,7 +374,7 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
 
         # lipschitz constant
         lipschitzs = lipschitz_files[freq]
-        lipschitzs = np.reshape(lipschitzs, (lipschitzs.shape[0], -1, lipschitzs.shape[3]))
+        lipschitzs = np.reshape(lipschitzs, (-1))
         lip_const[freq] = lipschitzs
 
         # PLOTS
@@ -429,7 +429,9 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
         smoothed = smooth(lip_const[freq])
         ax.plot(smoothed, color=colors[idx])
     ax.set_ylabel('Lipschitz Constant')
-    ax.set_xlabel('Iteration')
+    ax.set_xticks([0,50000, 100000, 150000, 200000, 250000, 300000])
+    ax.set_xticklabels([0, 500, 1000, 1500, 2000, 2500, 3000])
+    ax.set_xlabel('Epoch')
     # ax.set_yscale('log')
     # plt.legend(loc='lower right', ncol=2, frameon=False)
     plt.tight_layout()
