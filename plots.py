@@ -10,7 +10,7 @@ from tqdm import tqdm
 import os
 import seaborn as sns
 
-plt.rcParams.update({'font.size': 12})
+plt.rcParams.update({'font.size': 18})
 
 def plot_data(surface, samples, freq, type='imshow'):
     fig = plt.figure()
@@ -284,36 +284,43 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
     """
     dirs = []
     for freq in freqs:
-        dirs.append('pickles/old/tracked_items/{}_samples_{}_freq_{}_epochs'.format(N, freq, epochs))
+        dirs.append('pickles/tracked_items/{}_samples_{}_freq_{}_epochs'.format(N, freq, epochs))
+
+    raw_bias = {}
+    raw_lr = {}
+
     bias_files = {}
     lr_files = {}  # key = frequency value = list of files
     error_files = {}
-    raw_bias = {}
-    raw_lr = {}
+    lipschitz_files = {}
     for idx, dir in enumerate(dirs):
         path, dirs, files = next(os.walk("{}".format(dir)))
         bias_files[freqs[idx]] = [file for file in files if 'b1' in file]
         lr_files[freqs[idx]] = [file for file in files if 'lr' in file]
         error_files[freqs[idx]] = [file for file in files if 'error' in file]
+        lipschitz_files[freqs[idx]] = [file for file in files if 'lipschitz' in file]
 
     for freq in bias_files.keys():  # each iter different freq
         biases = []
         lrs = []
         errors = []
+        lipschitzs = []
         for i in range(len(bias_files[freq])):
-            bias = pickle.load(open('pickles/old/tracked_items/{}_samples_{}_freq_{}_epochs/b1_{}'.format(N, freq, epochs, i), 'rb'))
-            lr = pickle.load(open('pickles/old/tracked_items/{}_samples_{}_freq_{}_epochs/lr_{}'.format(N, freq, epochs, i), 'rb'))
-            error = pickle.load(open('pickles/old/tracked_items/{}_samples_{}_freq_{}_epochs/error_{}'.format(N, freq, epochs, i), 'rb'))
-
+            bias = pickle.load(open('pickles/tracked_items/{}_samples_{}_freq_{}_epochs/b1_{}'.format(N, freq, epochs, i), 'rb'))
+            lr = pickle.load(open('pickles/tracked_items/{}_samples_{}_freq_{}_epochs/lr_{}'.format(N, freq, epochs, i), 'rb'))
+            error = pickle.load(open('pickles/tracked_items/{}_samples_{}_freq_{}_epochs/error_{}'.format(N, freq, epochs, i), 'rb'))
+            lipschitz = pickle.load(open('pickles/tracked_items/{}_samples_{}_freq_{}_epochs/lipschitz_{}'.format(N, freq, epochs, i), 'rb'))
             # append to iteration lists
             biases.append(bias)
             lrs.append(lr)
             errors.append(error)
-
+            lipschitzs.append(lipschitz
+                              )
         # convert to numpy for ease
         biases = np.array(biases)
         lrs = np.array(lrs)
         errors = np.array(errors)
+        lipschitzs = np.array(lipschitzs)
 
         # calc stats
         mean_biases = np.mean(biases, axis=0)
@@ -324,12 +331,16 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
         bias_files[freq] = mean_biases
         lr_files[freq] = mean_lrs
         error_files[freq] = mean_errors
+
+        lipschitz_files[freq] = lipschitzs
         raw_bias[freq] = biases
         raw_lr[freq] = lrs
+
     # METRIC CALCULATION
     trajectory = {}
     variance = {}
     distance = {}
+    lip_const = {}
     for freq in freqs:
         biases = bias_files[freq]
         lrs = lr_files[freq]
@@ -361,26 +372,33 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
         freq_distance = np.reshape(freq_distance, -1)  # flatten
         distance[freq] = freq_distance
 
-    # PLOTS
+        # lipschitz constant
+        lipschitzs = lipschitz_files[freq]
+        lipschitzs = np.reshape(lipschitzs, (lipschitzs.shape[0], -1, lipschitzs.shape[3]))
+        lip_const[freq] = lipschitzs
+
+        # PLOTS
     colors = ['#e66101', '#fdb863', '#b2abd2', '#5e3c99']
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
 
     # iterate with reverse order to plot smaller frequencies on top
     for idx, freq in enumerate(list(trajectory.keys())[::-1]):
-        plt.plot(trajectory[freq], label='Freq: {}'.format(freq), color=colors[idx], alpha=0.3)
+        ax.plot(trajectory[freq], label='Freq: {}'.format(freq), color=colors[idx], alpha=0.3)
         smoothed = smooth(trajectory[freq])
-        plt.plot(smoothed, color=colors[idx])
-    plt.ylabel('SGD Trajectory')
-    plt.xlabel('Epoch')
-    plt.yscale('log')
+        ax.plot(smoothed, color=colors[idx])
+    ax.set_ylabel('SGD Trajectory')
+    ax.set_xlabel('Epoch')
+    ax.set_yscale('log')
     plt.legend(loc='lower right', ncol=2, frameon=False)
     plt.tight_layout()
     plt.savefig('images/experiment_1/trajectory.pdf', format='pdf')
     plt.show()
 
-    fig, ax = plt.subplots(nrows=1, ncols=1)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
 
     vplot = ax.violinplot(variance.values(), showmeans=False, showmedians=True, showextrema=False)
-    ax.set_ylabel('Bias Variance')
+    ax.set_ylabel('Normalized Bias Variance')
     ax.set_xlabel('Frequency')
     ax.set_yscale('log')
     ax.set_xticks(np.arange(1, len(list(variance.keys())) + 1))
@@ -392,7 +410,7 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
     plt.savefig('images/experiment_1/variance.pdf', format='pdf')
     plt.show()
 
-    fig, ax = plt.subplots(nrows=1, ncols=1)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
     vplot = ax.violinplot(distance.values(), showmeans=False, showmedians=True, showextrema=False)
     ax.set_ylabel("Distance to Initialization")
     ax.set_xlabel('Frequency')
@@ -403,5 +421,18 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
     vplot['cmedians'].set_color('black')
     plt.tight_layout()
     plt.savefig('images/experiment_1/distance.pdf', format='pdf')
+    plt.show()
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    for idx, freq in enumerate(list(lip_const.keys())[::-1]):
+        ax.plot(lip_const[freq], label='Freq: {}'.format(freq), color=colors[idx], alpha=0.3)
+        smoothed = smooth(lip_const[freq])
+        ax.plot(smoothed, color=colors[idx])
+    ax.set_ylabel('Lipschitz Constant')
+    ax.set_xlabel('Iteration')
+    # ax.set_yscale('log')
+    # plt.legend(loc='lower right', ncol=2, frameon=False)
+    plt.tight_layout()
+    plt.savefig('images/experiment_1/lipschitz.pdf', format='pdf')
     plt.show()
 # plot_trajectory_variance_distance_alt(100, [0.25, 0.5, 0.75, 1.0], 3000)
