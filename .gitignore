@@ -1,0 +1,7 @@
+/data/
+/pickles/
+/images/
+/cnn_pickles/
+/.pytest_cache/
+/.ipynb_checkpoints/
+/checkpoints/
