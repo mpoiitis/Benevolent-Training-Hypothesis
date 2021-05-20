@@ -201,6 +201,7 @@ def run_mlp():
         pickle.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'))
         pickle.dump(mean_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'))
         pickle.dump(avg_errors, open('{}/avg_error_{}.pickle'.format(directory, file_count), 'wb'))
+        pickle.dump(avg_test_errors, open('{}/avg_test_error_{}.pickle'.format(directory, file_count), 'wb'))
         # plot_metrics(mean_train_losses, mean_test_losses, avg_errors, N, args.bs)
 
     y_preds = torch.empty(len(dataloader), args.bs)
@@ -333,6 +334,7 @@ def run_cnn():
         pickle.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'))
         pickle.dump(mean_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'))
         pickle.dump(avg_errors, open('{}/avg_error_{}.pickle'.format(directory, file_count), 'wb'))
+        pickle.dump(avg_test_errors, open('{}/avg_test_error_{}.pickle'.format(directory, file_count), 'wb'))
 
 if __name__ == '__main__':
     for i in tqdm(range(args.repeats)):
