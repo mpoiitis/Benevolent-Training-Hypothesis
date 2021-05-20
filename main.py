@@ -166,7 +166,7 @@ def run_mlp():
                 for batch_idx, (test_x_batch, test_y_batch) in enumerate(test_dataloader):
                     test_y_pred = model(test_x_batch)
                     test_y_pred = test_y_pred.view(-1)
-                    loss = loss_fn(test_y_pred, test_y_batch)
+                    loss = loss_fn(test_y_pred, test_y_batch) / 2
                     test_losses.append(loss.item())
 
                     test_error = torch.abs(test_y_pred - test_y_batch)
