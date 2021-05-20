@@ -40,9 +40,24 @@ class CustomCIFAR10(torchvision.datasets.CIFAR10):
         self.data = self.data[mask]
         self.targets = labels[mask].tolist()
         self.classes = classes[class_mask].tolist()
+
         # renumber remaining labels from 0
         mapping = {v: k for k, v in enumerate(set(self.targets))}
         self.targets = [mapping[y] for y in self.targets]
+    # def __init__(self, *args, exclude_list=[], **kwargs):
+    #     super(CustomCIFAR10, self).__init__(*args, **kwargs)
+    #     classDict = {'airplane': 0, 'automobile': 1, 'bird': 2, 'cat': 3, 'deer': 4, 'dog': 5, 'frog': 6, 'horse': 7, 'ship': 8, 'truck': 9}
+    #     if exclude_list == []:
+    #         return
+    #
+    #     labels = np.array(self.targets)
+    #     exclude = np.array(exclude_list).reshape(1, -1)
+    #     mask = ~(labels.reshape(-1, 1) == exclude).any(axis=1)
+    #
+    #     self.data = np.concatenate((self.data[mask], self.data[~mask]), axis=0)
+    #     self.targets = [0 for i in labels[mask]] + [1 for i in labels[~mask]]
+    #     self.classes = ['class_1', 'class_2']
+
 
 
 def parse_args():

@@ -432,8 +432,6 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
     ax.set_xticks([0,50000, 100000, 150000, 200000, 250000, 300000])
     ax.set_xticklabels([0, 500, 1000, 1500, 2000, 2500, 3000])
     ax.set_xlabel('Epoch')
-    # ax.set_yscale('log')
-    # plt.legend(loc='lower right', ncol=2, frameon=False)
     plt.tight_layout()
     plt.savefig('images/experiment_1/lipschitz.pdf', format='pdf')
     plt.show()

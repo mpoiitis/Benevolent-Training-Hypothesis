@@ -128,20 +128,24 @@ def run_mlp():
                 y_pred = model(x_batch)
                 y_pred = y_pred.view(-1)
 
-                loss = loss_fn(y_pred, y_batch)
+                loss = loss_fn(y_pred, y_batch) / 2
                 loss.backward()
                 optimizer.step()
                 train_losses.append(loss.item())
 
-                error = torch.abs(y_batch - y_pred) / torch.abs(y_batch)
+                error = torch.abs(y_batch - y_pred)
+                # error = torch.abs(y_batch - y_pred) / torch.abs(y_batch)
                 avg_error[batch_idx] = error
 
                 with torch.no_grad():
                     x = x_batch
-                    lipschitz = model.layers[0].weight.data.clone()
+                    W_1 = model.layers[0].weight.data.clone()
+                    lipschitz = W_1
                     for idx, layer in enumerate(model.layers):
                         if idx % 2 == 0 and idx != 0:  # append activations before relu as threshold is > 0 and relu crops negatives
-                            lipschitz = torch.matmul(layer.weight.data, torch.matmul(torch.diag(torch.where(x > 0, 1.0, 0.0).view(-1)), lipschitz)) # W_l * S_l * ...
+                            S_l = torch.diag(torch.where(x > 0, 1.0, 0.0).view(-1))
+                            W_l = layer.weight.data
+                            lipschitz = torch.matmul(W_l, torch.matmul(S_l, lipschitz)) # W_l * S_l * ...
                         x = layer(x)
                     lipschitz = torch.norm(lipschitz)
                 # for tracking metrics
@@ -216,36 +220,39 @@ def run_mlp():
 
 def run_cnn():
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    deer_dog_trainset = CustomCIFAR10(root='./data', train=True, download=True, transform=transform, exclude_list=[0, 1, 2, 3, 6, 7, 8, 9])
-    deer_dog_testset = CustomCIFAR10(root='./data', train=False, download=True, transform=transform, exclude_list=[0, 1, 2, 3, 6, 7, 8, 9])
+    custom_trainset = CustomCIFAR10(root='./data', train=True, download=True, transform=transform, exclude_list=[1, 2, 3, 4, 6, 7, 8, 9])  # these 5 classes will turn into 1. The other 5 also. Ultimately 2 classes 0, 1
+    custom_testset = CustomCIFAR10(root='./data', train=False, download=True, transform=transform, exclude_list=[1, 2, 3, 4, 6, 7, 8, 9])
+    # custom_trainset = CustomCIFAR10(root='./data', train=True, download=True, transform=transform, exclude_list=[3, 4, 5, 6, 7])  # these 5 classes will turn into 1. The other 5 also. Ultimately 2 classes 0, 1
+    # custom_testset = CustomCIFAR10(root='./data', train=False, download=True, transform=transform, exclude_list=[3, 4, 5, 6, 7])
 
-    deer_dog_trainset = corrupt_labels(deer_dog_trainset, args.corrupt)
+    custom_trainset = corrupt_labels(custom_trainset, args.corrupt)
 
-    trainloader = torch.utils.data.DataLoader(deer_dog_trainset, batch_size=args.bs, shuffle=True)
-    testloader = torch.utils.data.DataLoader(deer_dog_testset, batch_size=args.bs, shuffle=False)
+    trainloader = torch.utils.data.DataLoader(custom_trainset, batch_size=args.bs, shuffle=True)
+    testloader = torch.utils.data.DataLoader(custom_testset, batch_size=args.bs, shuffle=False)
 
     model = CNN()
     model.to(device)
     if args.load_model:
         # LOAD MODEL
-        model.load_state_dict(torch.load('cnn_pickles/models/{}_samples_{}_freq_{}_epochs_{}_lr/model_state_{}'.format(N, freq, args.epochs, args.lr, args.epochs - 1)))
+        model.load_state_dict(torch.load('cnn_pickles/models/{}_bs_{}_epochs_{}_lr/model_state_{}'.format(args.bs, args.epochs, args.lr, args.epochs - 1)))
     else:
-        loss_fn = torch.nn.BCELoss() # Binary cross entropy
-        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+        loss_fn = torch.nn.BCELoss()  # Binary cross entropy
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
         # TRAIN-TEST
         mean_train_losses = []
         mean_test_losses = []
         avg_errors = []
+        avg_test_errors = []
 
         # things to track for the experiments
         epoch_bias = []  # size = (num_of_epochs, num_of_iters_in_epoch)
         epoch_lr = []
         epoch_error = []
-        epoch_lipschitz = []
+        test_epoch_error = []
 
         # get file count. Find the last repeat of the same experiment to append number in the saved file name
-        directory = 'cnn_pickles/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
+        directory = 'cnn_pickles/metrics/{}_bs_{}_epochs'.format(args.bs, args.epochs)
         file_count = get_file_count(directory, 'train_loss')
 
         for epoch in range(args.epochs):  # loop over the dataset multiple times
@@ -256,7 +263,7 @@ def run_cnn():
             iter_bias = []
             iter_lr = []
             iter_error = []
-            iter_lipschitz = []
+            test_iter_error = []
             for batch_idx, (x_batch, y_batch) in enumerate(trainloader):
                 x_batch = x_batch.to(device)
                 y_batch = y_batch.to(device, dtype=torch.float32)
@@ -271,29 +278,15 @@ def run_cnn():
 
                 error = torch.abs(y_pred - y_batch)
 
-                # with torch.no_grad():
-                #     x = x_batch
-                #     lipschitz = model.layers[1].weight.data.clone()
-                #     for idx, layer in enumerate(model.layers):
-                #         if idx in [4, 7, 11, 13, 15]:  # track all activations
-                #             w = torch.flatten(layer.weight.data)
-                #             s = torch.diag(torch.where(x > 0, 1.0, 0.0).view(-1))
-                #             print(w.shape, s.shape, lipschitz.shape)
-                #             lipschitz = torch.matmul(w, torch.matmul(s, lipschitz))  # W_l * S_l * ...
-                #         x = layer(x)
-                #     lipschitz = torch.norm(lipschitz)
-                lipschitz = torch.FloatTensor(1)
                 # for tracking metrics
                 iter_bias.append(model.layers[1].bias.cpu().detach().numpy())
                 iter_lr.append(optimizer.param_groups[0]['lr'])
                 iter_error.append(error.cpu().detach().numpy()[0])
-                iter_lipschitz.append(float(lipschitz.cpu().detach().numpy()))
 
             # append first level bias in list
             epoch_bias.append(iter_bias)
             epoch_lr.append(iter_lr)
             epoch_error.append(iter_error)
-            epoch_lipschitz.append(iter_lipschitz)
 
             model.eval()
             with torch.no_grad():
@@ -305,31 +298,35 @@ def run_cnn():
                     loss = loss_fn(test_y_pred, test_y_batch)
                     test_losses.append(loss.item())
 
+                    test_error = torch.abs(test_y_pred - test_y_batch)
+                    test_iter_error.append(test_error.cpu().detach().numpy()[0])
+                test_epoch_error.append(test_iter_error)
+
             mean_train_losses.append(np.mean(train_losses))
             mean_test_losses.append(np.mean(test_losses))
             avg_errors.append(np.mean(epoch_error))
-            print('epoch : {}, train loss : {:.4f}, test loss : {:.4f}, Average Error : {}'.format(epoch + 1, mean_train_losses[-1], mean_test_losses[-1], avg_errors[-1]))
+            avg_test_errors.append(np.mean(test_epoch_error))
+            print('epoch : {}, train loss : {:.4f}, test loss : {:.4f}, Average Error : {}, Average Test Error : {}'.format(epoch + 1, mean_train_losses[-1], mean_test_losses[-1], avg_errors[-1], avg_test_errors[-1]))
 
-            # # SAVE MODEL STATE EVERY 100 EPOCHS
-            # if epoch % 100 == 0 or (epoch == args.epochs - 1):
-            #     directory = 'cnn_pickles/models/{}_samples_{}_freq_{}_epochs_{}_lr/{}'.format(N, freq, args.epochs, args.lr, file_count)
-            #     if not os.path.exists(directory):
-            #         os.makedirs(directory)
-            #     torch.save(model.state_dict(), '{}/model_state_{}'.format(directory, epoch))
-        # # write first level bias from training to file. Same for lr and error
-        # directory = 'cnn_pickles/tracked_items/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
-        # if not os.path.exists(directory):
-        #     os.makedirs(directory)
-        # pickle.dump(epoch_bias, open('{}/b1_{}'.format(directory, file_count), 'wb'))
-        # pickle.dump(epoch_lr, open('{}/lr_{}'.format(directory, file_count), 'wb'))
-        # pickle.dump(epoch_error, open('{}/error_{}'.format(directory, file_count), 'wb'))
-        # pickle.dump(epoch_lipschitz, open('{}/lipschitz_{}'.format(directory, file_count), 'wb'))
-        #
-        # directory = 'cnn_pickles/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
-        # if not os.path.exists(directory):
-        #     os.makedirs(directory)
-        # pickle.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'))
-        # pickle.dump(mean_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'))
+            # SAVE MODEL STATE EVERY 100 EPOCHS
+            if epoch % 100 == 0 or (epoch == args.epochs - 1):
+                directory = 'cnn_pickles/models/{}_bs_{}_epochs_{}_lr/{}'.format(args.bs, args.epochs, args.lr, file_count)
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                torch.save(model.state_dict(), '{}/model_state_{}'.format(directory, epoch))
+        # write first level bias from training to file. Same for lr and error
+        directory = 'cnn_pickles/tracked_items/{}_bs_{}_epochs'.format(args.bs, args.epochs)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        pickle.dump(epoch_bias, open('{}/b1_{}'.format(directory, file_count), 'wb'))
+        pickle.dump(epoch_lr, open('{}/lr_{}'.format(directory, file_count), 'wb'))
+        pickle.dump(epoch_error, open('{}/error_{}'.format(directory, file_count), 'wb'))
+
+        directory = 'cnn_pickles/metrics/{}_bs_{}_epochs'.format(args.bs, args.epochs)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        pickle.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'))
+        pickle.dump(mean_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'))
 
 
 if __name__ == '__main__':
