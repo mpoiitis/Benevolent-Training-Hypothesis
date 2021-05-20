@@ -102,11 +102,13 @@ def run_mlp():
         mean_train_losses = []
         mean_test_losses = []
         avg_errors = []
+        avg_test_errors = []
 
         # things to track for the experiments
         epoch_bias = []  # size = (num_of_epochs, num_of_iters_in_epoch)
         epoch_lr = []
         epoch_error = []
+        test_epoch_error = []
         epoch_lipschitz = []
 
         # get file count. Find the last repeat of the same experiment to append number in the saved file name
@@ -117,11 +119,11 @@ def run_mlp():
             model.train()
             train_losses = []
             test_losses = []
-            avg_error = torch.empty(len(dataloader), args.bs)
 
             iter_bias = []
             iter_lr = []
             iter_error = []
+            test_iter_error = []
             iter_lipschitz = []
             for batch_idx, (x_batch, y_batch) in enumerate(dataloader):
                 optimizer.zero_grad()
@@ -135,7 +137,6 @@ def run_mlp():
 
                 error = torch.abs(y_batch - y_pred)
                 # error = torch.abs(y_batch - y_pred) / torch.abs(y_batch)
-                avg_error[batch_idx] = error
 
                 with torch.no_grad():
                     x = x_batch
@@ -168,12 +169,16 @@ def run_mlp():
                     loss = loss_fn(test_y_pred, test_y_batch)
                     test_losses.append(loss.item())
 
+                    test_error = torch.abs(test_y_pred - test_y_batch)
+                    test_iter_error.append(test_error.cpu().detach().numpy()[0])
+                test_epoch_error.append(test_iter_error)
+
             mean_train_losses.append(np.mean(train_losses))
             mean_test_losses.append(np.mean(test_losses))
 
-            avg_error = torch.mean(avg_error)
-            avg_errors.append(avg_error.cpu().detach().numpy())
-            print('epoch : {}, train loss : {:.4f}, test loss : {:.4f}, Average Error : {}'.format(epoch + 1, np.mean(train_losses), np.mean(test_losses), avg_error))
+            avg_errors.append(np.mean(epoch_error))
+            avg_test_errors.append(np.mean(test_epoch_error))
+            print('epoch : {}, train loss : {:.4f}, test loss : {:.4f}, Average Error : {}, Average Test Error : {}'.format(epoch + 1, mean_train_losses[-1], mean_test_losses[-1], avg_errors[-1], avg_test_errors[-1]))
 
             # SAVE MODEL STATE EVERY 100 EPOCHS
             if epoch % 100 == 0 or (epoch == args.epochs - 1):
@@ -327,9 +332,9 @@ def run_cnn():
             os.makedirs(directory)
         pickle.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'))
         pickle.dump(mean_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'))
-
+        pickle.dump(avg_errors, open('{}/avg_error_{}.pickle'.format(directory, file_count), 'wb'))
 
 if __name__ == '__main__':
     for i in tqdm(range(args.repeats)):
-        # run_mlp()
-        run_cnn()
+        run_mlp()
+        # run_cnn()
