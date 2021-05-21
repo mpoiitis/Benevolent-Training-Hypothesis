@@ -232,8 +232,8 @@ def run_cnn():
 
     custom_trainset = corrupt_labels(custom_trainset, args.corrupt)
 
-    trainloader = torch.utils.data.DataLoader(custom_trainset, batch_size=args.bs, shuffle=True, num_workers=1)
-    testloader = torch.utils.data.DataLoader(custom_testset, batch_size=args.bs, shuffle=False, num_workers=1)
+    trainloader = torch.utils.data.DataLoader(custom_trainset, batch_size=args.bs, shuffle=True)
+    testloader = torch.utils.data.DataLoader(custom_testset, batch_size=args.bs, shuffle=False)
 
     model = CNN()
     model.to(device)
@@ -260,6 +260,8 @@ def run_cnn():
         directory = 'cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs'.format(args.corrupt, args.bs, args.epochs)
         file_count = get_file_count(directory, 'train_loss')
 
+        epoch_trajectory = []
+        epoch_variance = []
         for epoch in range(args.epochs):  # loop over the dataset multiple times
             model.train()
             train_losses = []
@@ -269,6 +271,11 @@ def run_cnn():
             iter_lr = []
             iter_error = []
             test_iter_error = []
+
+            iter_trajectory = 0
+            prev_bias = 0
+            prev_lr = 0
+            prev_err = 0
             for batch_idx, (x_batch, y_batch) in enumerate(trainloader):
                 x_batch = x_batch.to(device)
                 y_batch = y_batch.to(device, dtype=torch.float32)
@@ -284,11 +291,27 @@ def run_cnn():
                 error = torch.abs(y_pred - y_batch)
 
                 # for tracking metrics
-                iter_bias.append(model.layers[1].bias.cpu().detach().numpy())
-                iter_lr.append(optimizer.param_groups[0]['lr'])
-                iter_error.append(error.cpu().detach().numpy()[0])
+                bias = model.layers[1].bias.cpu().detach().numpy()
+                lr = optimizer.param_groups[0]['lr']
+                error = error.cpu().detach().numpy()[0]
+                iter_bias.append(bias)
+                iter_lr.append(lr)
+                iter_error.append(error)
+
+                if batch_idx > 0:
+                    iter_trajectory += np.linalg.norm(bias - prev_bias) / (prev_lr * prev_err)
+                prev_bias = bias
+                prev_lr = lr
+                prev_err = error
 
             scheduler.step()  # apply exponential decay
+
+            epoch_trajectory.append(iter_trajectory)
+
+            np_iter_bias = np.array(iter_bias)
+            mean_epoch_bias = np.reshape(np.mean(np_iter_bias, axis=0), (1, -1))  # average per epoch
+            variance = np.mean(np.power(np.linalg.norm((np_iter_bias - mean_epoch_bias), axis=1), 2) / np.power(np.array(iter_lr), 2), axis=0)
+            epoch_variance.append(variance)
 
             # append first level bias in list
             epoch_bias.append(iter_bias)
@@ -321,13 +344,21 @@ def run_cnn():
                 if not os.path.exists(directory):
                     os.makedirs(directory)
                 torch.save(model.state_dict(), '{}/model_state_{}'.format(directory, epoch))
+
+        np_epoch_bias = np.array(epoch_bias)
+        np_epoch_bias = np.reshape(np_epoch_bias, (-1, np_epoch_bias.shape[2]))
+        first_bias = np.reshape(np_epoch_bias[0], (1, -1))
+        distance = np.linalg.norm((np_epoch_bias - first_bias), axis=1)
         # write first level bias from training to file. Same for lr and error
         directory = 'cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs'.format(args.corrupt, args.bs, args.epochs)
         if not os.path.exists(directory):
             os.makedirs(directory)
-        joblib.dump(epoch_bias, open('{}/b1_{}'.format(directory, file_count), 'wb'), compress=True)
+        # joblib.dump(epoch_bias, open('{}/b1_{}'.format(directory, file_count), 'wb'), compress=True)
         joblib.dump(epoch_lr, open('{}/lr_{}'.format(directory, file_count), 'wb'), compress=True)
         joblib.dump(epoch_error, open('{}/error_{}'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(epoch_trajectory, open('{}/trajectory_{}'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(epoch_variance, open('{}/variance_{}'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(distance, open('{}/distance_{}'.format(directory, file_count), 'wb'), compress=True)
 
         directory = 'cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs'.format(args.corrupt, args.bs, args.epochs)
         if not os.path.exists(directory):

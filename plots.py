@@ -209,7 +209,7 @@ def plot_corr_metrics(corrupts, bs, epochs):
     # plt.yscale('log')
     plt.tight_layout()
     plt.show()
-# plot_corr_metrics([0.0, 0.25, 0.5, 0.75], 100, 40)
+# plot_corr_metrics([0.0, 0.2, 0.4, 0.6], 100, 100)
 
 
 def plot_trajectory_variance_distance(N, freqs, epochs):
@@ -509,93 +509,45 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs):
     for corrupt in corrupts:
         dirs.append('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs'.format(corrupt, bs, epochs))
 
-    raw_bias = {}
-    raw_lr = {}
-
-    bias_files = {}
-    lr_files = {}  # key = frequency value = list of files
-    error_files = {}
+    total_trajectories = {}
+    total_variances = {}  # key = frequency value = list of files
+    total_distances = {}
     for idx, dir in enumerate(dirs):
         path, dirs, files = next(os.walk("{}".format(dir)))
-        bias_files[corrupts[idx]] = [file for file in files if 'b1' in file]
-        lr_files[corrupts[idx]] = [file for file in files if 'lr' in file]
-        error_files[corrupts[idx]] = [file for file in files if 'error' in file]
+        total_trajectories[corrupts[idx]] = [file for file in files if 'trajectory' in file]
+        total_variances[corrupts[idx]] = [file for file in files if 'variance' in file]
+        total_distances[corrupts[idx]] = [file for file in files if 'distance' in file]
 
-    for corrupt in bias_files.keys():  # each iter different freq
-        biases = []
-        lrs = []
-        errors = []
-        for i in range(len(bias_files[corrupt])):
-            bias = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/b1_{}'.format(corrupt, bs, epochs, i), 'rb'))
-            lr = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/lr_{}'.format(corrupt, bs, epochs, i), 'rb'))
-            error = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/error_{}'.format(corrupt, bs, epochs, i), 'rb'))
+    for corrupt in corrupts:  # each iter different freq
+        trajectories = []
+        variances = []
+        distances = []
+        for i in range(len(total_trajectories[corrupt])):
+            trajectory = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/trajectory_{}'.format(corrupt, bs, epochs, i), 'rb'))
+            variance = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/variance_{}'.format(corrupt, bs, epochs, i), 'rb'))
+            distance = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/distance_{}'.format(corrupt, bs, epochs, i), 'rb'))
 
             # append to iteration lists
-            biases.append(bias)
-            lrs.append(lr)
-            errors.append(error)
-        # convert to numpy for ease
-        biases = np.array(biases)
-        lrs = np.array(lrs)
-        errors = np.array(errors)
+            trajectories.append(trajectory)
+            variances.append(variance)
+            distances.append(distance)
 
-        # calc stats
-        mean_biases = np.mean(biases, axis=0)
-        mean_lrs = np.mean(lrs, axis=0)
-        mean_errors = np.mean(errors, axis=0)
-
-        # create the utmost dictionary for each freq
-        bias_files[corrupt] = mean_biases
-        lr_files[corrupt] = mean_lrs
-        error_files[corrupt] = mean_errors
-
-        raw_bias[corrupt] = biases
-        raw_lr[corrupt] = lrs
-
-    # METRIC CALCULATION
-    trajectory = {}
-    variance = {}
-    distance = {}
-    for corrupt in corrupts:
-        biases = bias_files[corrupt]
-        lrs = lr_files[corrupt]
-        avg_errors = error_files[corrupt]
-
-        epoch_trajectory = []
-        for epoch in range(epochs):
-            iter_trajectory = 0
-            for i in range(len(biases[epoch]) - 1):
-                iter_trajectory += np.linalg.norm((biases[epoch][i+1] - biases[epoch][i])/(lrs[epoch][i]*avg_errors[epoch][i])) / len(biases[epoch])
-            epoch_trajectory.append(iter_trajectory)
-        trajectory[corrupt] = epoch_trajectory
-
-        # variance of corollary 1
-        raw_biases = raw_bias[corrupt]
-        raw_lrs = raw_lr[corrupt]
-        mean_raw_biases = np.reshape(np.mean(raw_biases, axis=2), (raw_biases.shape[0], raw_biases.shape[1], 1, -1))  # average per window T
-        norm_mean_raw_biases = np.power(np.linalg.norm((raw_biases - mean_raw_biases), axis=3), 2) / np.power(raw_lrs,2)
-        corrupt_variance = np.mean(norm_mean_raw_biases, axis=2)
-        corrupt_variance = corrupt_variance[:, -10:]  # keep only last k=10 epochs to plot
-        corrupt_variance = np.reshape(corrupt_variance, -1)  # flatten
-        variance[corrupt] = corrupt_variance
-
-        # distance of corollary 2
-        raw_biases = np.reshape(raw_biases, (raw_biases.shape[0], -1, raw_biases.shape[3]))  # flatten
-        first_bias = np.reshape(raw_biases[:, 0], (raw_biases.shape[0], 1, -1))
-        corrupt_distance = np.linalg.norm((raw_biases - first_bias), axis=2)
-        corrupt_distance = corrupt_distance[:, -10*N:]  # keep only last k=10*N iterations to plot
-        corrupt_distance = np.reshape(corrupt_distance, -1)  # flatten
-        distance[corrupt] = corrupt_distance
+        trajectories = np.mean(np.array(trajectories), axis=0)
+        variances = np.mean(np.array(variances), axis=0)
+        distances = np.mean(np.array(distance), axis=0)
+        total_trajectories[corrupt] = trajectories
+        total_variances[corrupt] = variances
+        total_distances[corrupt] = distances
 
         # PLOTS
     colors = ['#e66101', '#fdb863', '#b2abd2', '#5e3c99']
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
 
-    # iterate with reverse order to plot smaller frequencies on top
-    for idx, corrupt in enumerate(list(trajectory.keys())[::-1]):
+    # iterate with reverse order to plot smaller corruptions on top
+    for idx, corrupt in enumerate(corrupts[::-1]):
         # ax.plot(trajectory[corrupt], label='Corruption: {}'.format(corrupt), color=colors[idx], alpha=0.3)
-        ax.plot(trajectory[corrupt], label='Corr: {}'.format(corrupt), color=colors[idx])
+        ax.plot(total_trajectories[corrupt], label='Corr: {}'.format(corrupt), color=colors[idx])
         # smoothed = smooth(trajectory[corrupt])
         # ax.plot(smoothed, color=colors[idx])
     ax.set_ylabel('SGD Trajectory')
@@ -608,12 +560,12 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs):
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
 
-    vplot = ax.violinplot(variance.values(), showmeans=False, showmedians=True, showextrema=False)
+    vplot = ax.violinplot(total_variances.values(), showmeans=False, showmedians=True, showextrema=False)
     ax.set_ylabel('Normalized Bias Variance')
     ax.set_xlabel('Corruption Rate')
     ax.set_yscale('log')
-    ax.set_xticks(np.arange(1, len(list(variance.keys())) + 1))
-    ax.set_xticklabels(list(variance.keys()))
+    ax.set_xticks(np.arange(1, len(corrupts) + 1))
+    ax.set_xticklabels(corrupts)
     for patch, color in zip(vplot['bodies'], colors[::-1]):
         patch.set_color(color)
     vplot['cmedians'].set_color('black')
@@ -622,18 +574,18 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs):
     plt.show()
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
-    vplot = ax.violinplot(distance.values(), showmeans=False, showmedians=True, showextrema=False)
+    vplot = ax.violinplot(total_distances.values(), showmeans=False, showmedians=True, showextrema=False)
     ax.set_ylabel("Distance to Initialization")
     ax.set_xlabel('Corruption Rate')
-    ax.set_xticks(np.arange(1, len(list(distance.keys())) + 1))
-    ax.set_xticklabels(list(distance.keys()))
+    ax.set_xticks(np.arange(1, len(corrupts) + 1))
+    ax.set_xticklabels(corrupts)
     for patch, color in zip(vplot['bodies'], colors[::-1]):
         patch.set_color(color)
     vplot['cmedians'].set_color('black')
     plt.tight_layout()
     plt.savefig('images/experiment_1/distance.pdf', format='pdf')
     plt.show()
-# plot_trajectory_variance_distance_cnn(10000, [0.0, 0.25, 0.5, 0.75], 100, 40)
+# plot_trajectory_variance_distance_cnn(10000, [0.0, 0.2, 0.4, 0.6], 100, 100)
 
 
 def visualize_regions():

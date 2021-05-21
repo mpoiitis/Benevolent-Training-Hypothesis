@@ -56,42 +56,6 @@ class MLP(nn.Module):
         return x
 
 
-# class CNN(nn.Module):
-#     def __init__(self):
-#         super().__init__()
-#         self.layers = nn.Sequential(
-#             nn.Flatten(),
-#             nn.Linear(3 * 32 * 32, 3 * 32 * 32),
-#             nn.ReLU(),
-#             nn.Unflatten(1, (3, 32, 32)),
-#             nn.Conv2d(3, 6, 5),
-#             nn.ReLU(),
-#             nn.MaxPool2d(2, 2),
-#             nn.Conv2d(6, 16, 5),
-#             nn.ReLU(),
-#             nn.MaxPool2d(2, 2),
-#             nn.Flatten(),
-#             nn.Linear(16 * 5 * 5, 120), # with 2x2 pooling
-#             nn.ReLU(),
-#             nn.Linear(120, 6),
-#             nn.ReLU(),
-#             nn.Linear(6, 1),
-#             nn.Sigmoid()
-#         )
-#         self.layers[1].weight.data.copy_(torch.eye(3 * 32 * 32))  # initialize 1st layer's weights to identity
-#         self.layers[1].weight.requires_grad = False  # freeze weights of the first layer. Only bias is trained on the 1st layer
-#
-#     def forward(self, x):
-#         for idx, layer in enumerate(self.layers):
-#             # if idx == len(self.layers) - 2:  # layer after convolutions. x is after relu
-#             #     x = x.view(x.shape[0], x.shape[1], -1)  # concatenate width and height
-#             #     x = torch.mean(x, dim=2)  # sum for each channel
-#             #     x = layer(x)
-#             # else:
-#             #     x = layer(x)
-#             x = layer(x)
-#         return x
-
 class CNN(nn.Module):
     def __init__(self):
         super().__init__()
