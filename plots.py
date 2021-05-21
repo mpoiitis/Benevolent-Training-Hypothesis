@@ -1,5 +1,6 @@
 import torch
 import pickle
+import joblib
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -148,6 +149,67 @@ def plot_freq_metrics(N, freqs, epochs):
     plt.tight_layout()
     plt.show()
 # plot_freq_metrics(100, [0.25, 0.5, 0.75, 1.0], 3000)
+
+
+def plot_corr_metrics(N, corrupts, bs, epochs):
+    dirs = []
+    for corrupt in corrupts:
+        dirs.append('cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs'.format(corrupt, bs, epochs))
+
+    train_files = {}
+    test_files = {} # key = frequency value = list of files
+    for idx, dir in enumerate(dirs):
+        path, dirs, files = next(os.walk("{}".format(dir)))
+        train_files[corrupts[idx]] = [file for file in files if 'train_loss' in file]
+        test_files[corrupts[idx]] = [file for file in files if 'test_loss' in file]
+
+    for corrupt in train_files.keys(): # each iter different freq
+        train_losses = []
+        test_losses = []
+        for i in range(len(train_files[corrupt])):
+            train = joblib.load(open('cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs/train_loss_{}.pickle'.format(corrupt, bs, epochs, i), 'rb'))
+            test = joblib.load(open('cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs/test_loss_{}.pickle'.format(corrupt, bs, epochs, i), 'rb'))
+            # convert tensors to float
+            train = [float(i) for i in train]
+            test = [float(i) for i in test]
+            # append to iteration lists
+            train_losses.append(train)
+            test_losses.append(test)
+
+        # convert to numpy for ease
+        train_losses = np.array(train_losses)
+        test_losses = np.array(test_losses)
+
+        # calc stats
+        mean_train_losses = np.mean(train_losses, axis=0)
+        mean_test_losses = np.mean(test_losses, axis=0)
+        std_train_losses = np.std(train_losses, axis=0)
+        std_test_losses = np.std(test_losses, axis=0)
+
+        # create the utmost dictionary for each freq
+        train_files[corrupt] = {'mean': mean_train_losses, 'std': std_train_losses}
+        test_files[corrupt] = {'mean': mean_test_losses, 'std': std_test_losses}
+
+
+    colors = ['#e66101', '#fdb863', '#b2abd2', '#5e3c99']  # = # distinct frequencies
+
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, sharey=True)
+    fig.set_size_inches(12, 5)
+
+    for idx, corrupt in enumerate(list(train_files.keys())[::-1]):
+        ax1.plot(train_files[corrupt]['mean'], label='corr:{}'.format(corrupt), color=colors[idx])
+        ax1.fill_between(np.arange(epochs), train_files[corrupt]['mean'] - train_files[corrupt]['std'], train_files[corrupt]['mean'] + train_files[corrupt]['std'], color=colors[idx], alpha=0.3)
+        ax2.plot(test_files[corrupt]['mean'], label='corr:{}'.format(corrupt), color=colors[idx])
+        ax2.fill_between(np.arange(epochs), test_files[corrupt]['mean'] - test_files[corrupt]['std'], test_files[corrupt]['mean'] + test_files[corrupt]['std'], color=colors[idx], alpha=0.3)
+    ax1.set_xlabel('Epoch')
+    ax2.set_xlabel('Epoch')
+    ax1.set_ylabel('Loss')
+    lines, labels = ax1.get_legend_handles_labels()
+    plt.legend(lines, labels, loc='best', ncol=2, frameon=False)
+    # plt.yscale('log')
+    plt.tight_layout()
+    plt.show()
+# plot_corr_metrics(100, [0.0, 0.25, 0.5, 0.75], 100, 40)
 
 
 def plot_trajectory_variance_distance(N, freqs, epochs):
@@ -436,3 +498,139 @@ def plot_trajectory_variance_distance_alt(N, freqs, epochs):
     plt.savefig('images/experiment_1/lipschitz.pdf', format='pdf')
     plt.show()
 # plot_trajectory_variance_distance_alt(100, [0.25, 0.5, 0.75, 1.0], 3000)
+
+
+def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs):
+    """
+    for each epoch calculate the pairwise (pairs of iterations) sum of biases according to Theorem 1's formula
+    plot these statistics for each frequency
+    """
+    dirs = []
+    for corrupt in corrupts:
+        dirs.append('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs'.format(corrupt, bs, epochs))
+
+    raw_bias = {}
+    raw_lr = {}
+
+    bias_files = {}
+    lr_files = {}  # key = frequency value = list of files
+    error_files = {}
+    for idx, dir in enumerate(dirs):
+        path, dirs, files = next(os.walk("{}".format(dir)))
+        bias_files[corrupts[idx]] = [file for file in files if 'b1' in file]
+        lr_files[corrupts[idx]] = [file for file in files if 'lr' in file]
+        error_files[corrupts[idx]] = [file for file in files if 'error' in file]
+
+    for corrupt in bias_files.keys():  # each iter different freq
+        biases = []
+        lrs = []
+        errors = []
+        for i in range(len(bias_files[corrupt])):
+            bias = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/b1_{}'.format(corrupt, bs, epochs, i), 'rb'))
+            lr = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/lr_{}'.format(corrupt, bs, epochs, i), 'rb'))
+            error = joblib.load(open('cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs/error_{}'.format(corrupt, bs, epochs, i), 'rb'))
+
+            # append to iteration lists
+            biases.append(bias)
+            lrs.append(lr)
+            errors.append(error)
+        # convert to numpy for ease
+        biases = np.array(biases)
+        lrs = np.array(lrs)
+        errors = np.array(errors)
+
+        # calc stats
+        mean_biases = np.mean(biases, axis=0)
+        mean_lrs = np.mean(lrs, axis=0)
+        mean_errors = np.mean(errors, axis=0)
+
+        # create the utmost dictionary for each freq
+        bias_files[corrupt] = mean_biases
+        lr_files[corrupt] = mean_lrs
+        error_files[corrupt] = mean_errors
+
+        raw_bias[corrupt] = biases
+        raw_lr[corrupt] = lrs
+
+    # METRIC CALCULATION
+    trajectory = {}
+    variance = {}
+    distance = {}
+    for corrupt in corrupts:
+        biases = bias_files[corrupt]
+        lrs = lr_files[corrupt]
+        avg_errors = error_files[corrupt]
+
+        epoch_trajectory = []
+        for epoch in range(epochs):
+            iter_trajectory = 0
+            for i in range(len(biases[epoch]) - 1):
+                iter_trajectory += np.linalg.norm((biases[epoch][i+1] - biases[epoch][i])/(lrs[epoch][i]*avg_errors[epoch][i])) / len(biases[epoch])
+            epoch_trajectory.append(iter_trajectory)
+        trajectory[corrupt] = epoch_trajectory
+
+        # variance of corollary 1
+        raw_biases = raw_bias[corrupt]
+        raw_lrs = raw_lr[corrupt]
+        mean_raw_biases = np.reshape(np.mean(raw_biases, axis=2), (raw_biases.shape[0], raw_biases.shape[1], 1, -1))  # average per window T
+        norm_mean_raw_biases = np.power(np.linalg.norm((raw_biases - mean_raw_biases), axis=3), 2) / np.power(raw_lrs,2)
+        corrupt_variance = np.mean(norm_mean_raw_biases, axis=2)
+        corrupt_variance = corrupt_variance[:, -10:]  # keep only last k=10 epochs to plot
+        corrupt_variance = np.reshape(corrupt_variance, -1)  # flatten
+        variance[corrupt] = corrupt_variance
+
+        # distance of corollary 2
+        raw_biases = np.reshape(raw_biases, (raw_biases.shape[0], -1, raw_biases.shape[3]))  # flatten
+        first_bias = np.reshape(raw_biases[:, 0], (raw_biases.shape[0], 1, -1))
+        corrupt_distance = np.linalg.norm((raw_biases - first_bias), axis=2)
+        corrupt_distance = corrupt_distance[:, -10*N:]  # keep only last k=10*N iterations to plot
+        corrupt_distance = np.reshape(corrupt_distance, -1)  # flatten
+        distance[corrupt] = corrupt_distance
+
+        # PLOTS
+    colors = ['#e66101', '#fdb863', '#b2abd2', '#5e3c99']
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+
+    # iterate with reverse order to plot smaller frequencies on top
+    for idx, corrupt in enumerate(list(trajectory.keys())[::-1]):
+        # ax.plot(trajectory[corrupt], label='Corruption: {}'.format(corrupt), color=colors[idx], alpha=0.3)
+        ax.plot(trajectory[corrupt], label='Corr: {}'.format(corrupt), color=colors[idx])
+        # smoothed = smooth(trajectory[corrupt])
+        # ax.plot(smoothed, color=colors[idx])
+    ax.set_ylabel('SGD Trajectory')
+    ax.set_xlabel('Epoch')
+    ax.set_yscale('log')
+    plt.legend(loc='lower right', ncol=2, frameon=False)
+    plt.tight_layout()
+    plt.savefig('images/experiment_1/trajectory.pdf', format='pdf')
+    plt.show()
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+
+    vplot = ax.violinplot(variance.values(), showmeans=False, showmedians=True, showextrema=False)
+    ax.set_ylabel('Normalized Bias Variance')
+    ax.set_xlabel('Corruption Rate')
+    ax.set_yscale('log')
+    ax.set_xticks(np.arange(1, len(list(variance.keys())) + 1))
+    ax.set_xticklabels(list(variance.keys()))
+    for patch, color in zip(vplot['bodies'], colors[::-1]):
+        patch.set_color(color)
+    vplot['cmedians'].set_color('black')
+    plt.tight_layout()
+    plt.savefig('images/experiment_1/variance.pdf', format='pdf')
+    plt.show()
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    vplot = ax.violinplot(distance.values(), showmeans=False, showmedians=True, showextrema=False)
+    ax.set_ylabel("Distance to Initialization")
+    ax.set_xlabel('Corruption Rate')
+    ax.set_xticks(np.arange(1, len(list(distance.keys())) + 1))
+    ax.set_xticklabels(list(distance.keys()))
+    for patch, color in zip(vplot['bodies'], colors[::-1]):
+        patch.set_color(color)
+    vplot['cmedians'].set_color('black')
+    plt.tight_layout()
+    plt.savefig('images/experiment_1/distance.pdf', format='pdf')
+    plt.show()
+# plot_trajectory_variance_distance_cnn(10000, [0.0, 0.25, 0.5, 0.75], 100, 40)

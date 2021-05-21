@@ -46,11 +46,11 @@ class CNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2, 2),
             nn.Flatten(),
-            nn.Linear(16 * 5 * 5, 120),  # without pooling
+            nn.Linear(16 * 5 * 5, 120), # with 2x2 pooling
             nn.ReLU(),
-            nn.Linear(120, 84),
+            nn.Linear(120, 6),
             nn.ReLU(),
-            nn.Linear(84, 1),
+            nn.Linear(6, 1),
             nn.Sigmoid()
         )
         self.layers[1].weight.data.copy_(torch.eye(3 * 32 * 32))  # initialize 1st layer's weights to identity
