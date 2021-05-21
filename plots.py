@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import LinearLocator
 from models import MLP
-from utils import smooth
-from tqdm import tqdm
+from utils import smooth, generate_cos_wave
 import os
-import seaborn as sns
+
 
 plt.rcParams.update({'font.size': 18})
+
 
 def plot_data(surface, samples, freq, type='imshow'):
     fig = plt.figure()
@@ -151,7 +151,7 @@ def plot_freq_metrics(N, freqs, epochs):
 # plot_freq_metrics(100, [0.25, 0.5, 0.75, 1.0], 3000)
 
 
-def plot_corr_metrics(N, corrupts, bs, epochs):
+def plot_corr_metrics(corrupts, bs, epochs):
     dirs = []
     for corrupt in corrupts:
         dirs.append('cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs'.format(corrupt, bs, epochs))
@@ -209,7 +209,7 @@ def plot_corr_metrics(N, corrupts, bs, epochs):
     # plt.yscale('log')
     plt.tight_layout()
     plt.show()
-# plot_corr_metrics(100, [0.0, 0.25, 0.5, 0.75], 100, 40)
+# plot_corr_metrics([0.0, 0.25, 0.5, 0.75], 100, 40)
 
 
 def plot_trajectory_variance_distance(N, freqs, epochs):
@@ -634,3 +634,20 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs):
     plt.savefig('images/experiment_1/distance.pdf', format='pdf')
     plt.show()
 # plot_trajectory_variance_distance_cnn(10000, [0.0, 0.25, 0.5, 0.75], 100, 40)
+
+
+def visualize_regions():
+    device = torch.device("cuda")
+    model = MLP(in_dim=10, n=32)
+    model.to(device)
+    model.load_state_dict(torch.load('pickles/experiment2/models/100_samples_0.25_freq_1000_epochs_0.001_lr/0/model_state_999'))
+
+    i = np.linspace(-1, 1, 100)
+    j = np.linspace(-1, 1, 100)
+    I, J = np.meshgrid(i, j)
+
+    f = generate_cos_wave(0.25, I, J)
+    print(I.shape, J.shape, f.shape)
+
+# visualize_regions()
+

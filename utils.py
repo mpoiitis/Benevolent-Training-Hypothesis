@@ -71,6 +71,7 @@ def parse_args():
   parser.add_argument('-d', '--decay', type=int, default=50, help='Learning rate decay factor. Specifically, in how many epochs to decrease LR by 1 order with exponential decay.')
   parser.add_argument('-ld', '--load-data', action='store_true', default=False, help='If given, loads data from pickles')
   parser.add_argument('-lm', '--load-model', action='store_true', default=False, help='If given, loads model from weight dict')
+  parser.add_argument('-cnn', '--cnn', action='store_true', default=False, help='If given, it runs the CNN model')
   parser.add_argument('-r', '--repeats', type=int, default=1, help='Number of repeats')
   args = parser.parse_args()
   return args

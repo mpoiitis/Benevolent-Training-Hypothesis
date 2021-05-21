@@ -51,7 +51,6 @@ def run_mlp():
         pickle.dump(test_x, open('pickles/data/{}_freq_test_data.pickle'.format(freq), 'wb'))
         pickle.dump(test_y, open('pickles/data/{}_freq_test_labels.pickle'.format(freq), 'wb'))
 
-
     # # PLOT DATA
     # i = np.linspace(-1, 1, 100)
     # j = np.linspace(-1, 1, 100)
@@ -88,12 +87,12 @@ def run_mlp():
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.bs, shuffle=False)
 
     # MODEL
-    model = MLP(in_dim=DATA_DIM, n=128)
+    model = MLP(in_dim=DATA_DIM, n=32)
 
     model.to(device)
     if args.load_model:
         # LOAD MODEL
-        model.load_state_dict(torch.load('pickles/models/{}_samples_{}_freq_{}_epochs_{}_lr/model_state_{}'.format(N, freq, args.epochs, args.lr, args.epochs-1)))
+        model.load_state_dict(torch.load('pickles/experiment2/models/{}_samples_{}_freq_{}_epochs_{}_lr/model_state_{}'.format(N, freq, args.epochs, args.lr, args.epochs-1)))
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
         loss_fn = torch.nn.MSELoss()
@@ -112,7 +111,7 @@ def run_mlp():
         epoch_lipschitz = []
 
         # get file count. Find the last repeat of the same experiment to append number in the saved file name
-        directory = 'pickles/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
+        directory = 'pickles/experiment2/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
         file_count = get_file_count(directory, 'train_loss')
 
         for epoch in range(args.epochs):
@@ -182,12 +181,12 @@ def run_mlp():
 
             # SAVE MODEL STATE EVERY 100 EPOCHS
             if epoch % 100 == 0 or (epoch == args.epochs - 1):
-                directory = 'pickles/models/{}_samples_{}_freq_{}_epochs_{}_lr/{}'.format(N, freq, args.epochs, args.lr, file_count)
+                directory = 'pickles/experiment2/models/{}_samples_{}_freq_{}_epochs_{}_lr/{}'.format(N, freq, args.epochs, args.lr, file_count)
                 if not os.path.exists(directory):
                     os.makedirs(directory)
                 torch.save(model.state_dict(), '{}/model_state_{}'.format(directory, epoch))
         # write first level bias from training to file. Same for lr and error
-        directory = 'pickles/tracked_items/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
+        directory = 'pickles/experiment2/tracked_items/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
         if not os.path.exists(directory):
             os.makedirs(directory)
         pickle.dump(epoch_bias, open('{}/b1_{}'.format(directory, file_count), 'wb'))
@@ -195,7 +194,7 @@ def run_mlp():
         pickle.dump(epoch_error, open('{}/error_{}'.format(directory, file_count), 'wb'))
         pickle.dump(epoch_lipschitz, open('{}/lipschitz_{}'.format(directory, file_count), 'wb'))
 
-        directory = 'pickles/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
+        directory = 'pickles/experiment2/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
         if not os.path.exists(directory):
             os.makedirs(directory)
         pickle.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'))
@@ -316,30 +315,33 @@ def run_cnn():
             avg_test_errors.append(np.mean(test_epoch_error))
             print('epoch : {}, train loss : {:.4f}, test loss : {:.4f}, Average Error : {}, Average Test Error : {}'.format(epoch + 1, mean_train_losses[-1], mean_test_losses[-1], avg_errors[-1], avg_test_errors[-1]))
 
-            # # SAVE MODEL STATE EVERY 100 EPOCHS
-            # if epoch % 10 == 0 or (epoch == args.epochs - 1):
-            #     directory = 'cnn_pickles/models/{}_corrupt_{}_bs_{}_epochs_{}_lr/{}'.format(args.corrupt, args.bs, args.epochs, args.lr, file_count)
-            #     if not os.path.exists(directory):
-            #         os.makedirs(directory)
-            #     torch.save(model.state_dict(), '{}/model_state_{}'.format(directory, epoch))
-        # # write first level bias from training to file. Same for lr and error
-        # directory = 'cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs'.format(args.corrupt, args.bs, args.epochs)
-        # if not os.path.exists(directory):
-        #     os.makedirs(directory)
-        # joblib.dump(epoch_bias, open('{}/b1_{}'.format(directory, file_count), 'wb'), compress=True)
-        # joblib.dump(epoch_lr, open('{}/lr_{}'.format(directory, file_count), 'wb'), compress=True)
-        # joblib.dump(epoch_error, open('{}/error_{}'.format(directory, file_count), 'wb'), compress=True)
-        #
-        # directory = 'cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs'.format(args.corrupt, args.bs, args.epochs)
-        # if not os.path.exists(directory):
-        #     os.makedirs(directory)
-        # joblib.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
-        # joblib.dump(mean_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
-        # joblib.dump(avg_errors, open('{}/avg_error_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
-        # joblib.dump(avg_test_errors, open('{}/avg_test_error_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
+            # SAVE MODEL STATE EVERY 100 EPOCHS
+            if epoch % 10 == 0 or (epoch == args.epochs - 1):
+                directory = 'cnn_pickles/models/{}_corrupt_{}_bs_{}_epochs_{}_lr/{}'.format(args.corrupt, args.bs, args.epochs, args.lr, file_count)
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                torch.save(model.state_dict(), '{}/model_state_{}'.format(directory, epoch))
+        # write first level bias from training to file. Same for lr and error
+        directory = 'cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs'.format(args.corrupt, args.bs, args.epochs)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        joblib.dump(epoch_bias, open('{}/b1_{}'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(epoch_lr, open('{}/lr_{}'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(epoch_error, open('{}/error_{}'.format(directory, file_count), 'wb'), compress=True)
+
+        directory = 'cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs'.format(args.corrupt, args.bs, args.epochs)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        joblib.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(mean_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(avg_errors, open('{}/avg_error_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(avg_test_errors, open('{}/avg_test_error_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
 
 
 if __name__ == '__main__':
     for i in tqdm(range(args.repeats)):
-        # run_mlp()
-        run_cnn()
+        if args.cnn:
+            run_cnn()
+        else:
+            run_mlp()
+
