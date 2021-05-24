@@ -231,6 +231,8 @@ def run_cnn():
     # custom_testset = CustomCIFAR10(root='./data', train=False, download=True, transform=transform, exclude_list=[3, 4, 5, 6, 7])
 
     custom_trainset = corrupt_labels(custom_trainset, args.corrupt)
+    from collections import Counter
+    c = Counter(custom_trainset.targets)
 
     trainloader = torch.utils.data.DataLoader(custom_trainset, batch_size=args.bs, shuffle=True)
     testloader = torch.utils.data.DataLoader(custom_testset, batch_size=args.bs, shuffle=False)

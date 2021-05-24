@@ -158,7 +158,8 @@ def plot_freq_metrics(N, freqs, epochs):
         ax.fill_between(np.arange(epochs), train_files[freq]['mean'] - train_files[freq]['std'], train_files[freq]['mean'] + train_files[freq]['std'], color=colors[idx], alpha=0.3)
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Train loss')
-    ax.set_ylim(0, 0.150)
+    ax.set_yticks([0.00, 0.05, 0.10, 0.15])
+    ax.set_ylim(-0.01, 0.175)
     plt.tight_layout()
     plt.savefig('images/experiment_1/mlp/train_loss.pdf', format='pdf')
     plt.show()
@@ -169,7 +170,8 @@ def plot_freq_metrics(N, freqs, epochs):
         ax.fill_between(np.arange(epochs), test_files[freq]['mean'] - test_files[freq]['std'], test_files[freq]['mean'] + test_files[freq]['std'], color=colors[idx], alpha=0.3)
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Test loss')
-    ax.set_ylim(0, 0.150)
+    ax.set_yticks([0.00, 0.05, 0.10, 0.15])
+    ax.set_ylim(-0.01, 0.175)
     plt.tight_layout()
     plt.savefig('images/experiment_1/mlp/test_loss.pdf', format='pdf')
     plt.show()
@@ -181,7 +183,7 @@ def plot_freq_metrics(N, freqs, epochs):
                         train_error_files[freq]['mean'] + train_error_files[freq]['std'], color=colors[idx], alpha=0.3)
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Train error')
-    ax.set_ylim(0, 0.4)
+    ax.set_ylim(0, 0.5)
     plt.tight_layout()
     plt.savefig('images/experiment_1/mlp/train_error.pdf', format='pdf')
     plt.show()
@@ -193,7 +195,7 @@ def plot_freq_metrics(N, freqs, epochs):
                         test_error_files[freq]['mean'] + test_error_files[freq]['std'], color=colors[idx], alpha=0.3)
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Test error')
-    ax.set_ylim(0, 0.4)
+    ax.set_ylim(0, 0.5)
     plt.tight_layout()
     plt.savefig('images/experiment_1/mlp/test_error.pdf', format='pdf')
     plt.show()
@@ -268,6 +270,7 @@ def plot_corr_metrics(corrupts, bs, epochs):
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Train loss')
     ax.set_ylim(0, 0.35)
+    ax.set_yticks([0.0, 0.1, 0.2, 0.3])
     plt.tight_layout()
     plt.savefig('images/experiment_1/cnn/train_loss.pdf', format='pdf')
     plt.show()
@@ -279,6 +282,7 @@ def plot_corr_metrics(corrupts, bs, epochs):
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Test loss')
     ax.set_ylim(0, 0.35)
+    ax.set_yticks([0.0, 0.1, 0.2, 0.3])
     plt.tight_layout()
     plt.savefig('images/experiment_1/cnn/test_loss.pdf', format='pdf')
     plt.show()
@@ -307,6 +311,7 @@ def plot_corr_metrics(corrupts, bs, epochs):
     plt.savefig('images/experiment_1/cnn/test_error.pdf', format='pdf')
     plt.show()
 # plot_corr_metrics([0.0, 0.2, 0.4, 0.6], 1, 100)
+
 
 def adjacent_values(vals, q1, q3):
     upper_adjacent_value = q3 + (q3 - q1) * 1.5
@@ -454,7 +459,7 @@ def plot_trajectory_variance_distance_mlp(N, freqs, epochs):
     vplot = ax.violinplot(distance.values(), showmeans=False, showmedians=True, showextrema=False)
     ax.set_ylabel("Distance to initialization")
     ax.set_xlabel('Frequency')
-    ax.set_ylim(0, 1.0)
+    ax.set_ylim(-0.1, 1.1)
     ax.set_xticks(np.arange(1, len(list(distance.keys())) + 1))
     ax.set_xticklabels(list(distance.keys()))
     for patch, color in zip(vplot['bodies'], colors[::-1]):
@@ -566,10 +571,10 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs):
     plt.tight_layout()
     plt.savefig('images/experiment_1/cnn/distance.pdf', format='pdf')
     plt.show()
-plot_trajectory_variance_distance_cnn(10000, [0.0, 0.2, 0.4, 0.6], 1, 100)
+# plot_trajectory_variance_distance_cnn(10000, [0.0, 0.2, 0.4, 0.6], 1, 100)
 
 
-def visualize_regions(N):
+def visualize_regions(N, freq):
     device = torch.device("cuda")
 
     # generate a grid of high resolution
@@ -580,12 +585,12 @@ def visualize_regions(N):
     xx1, xx2 = mesh
 
     # calculate labels
-    yy = generate_cos_wave(0.25, xx1, xx2)
+    yy = generate_cos_wave(freq, xx1, xx2)
     x_init = np.array(mesh).T.reshape((-1, 2))  # data is (100x100, 2)
     y = yy.reshape((-1))  # labels are (100x100)
 
-    # plt.contourf(xx1, xx2, yy)
-    # plt.show()
+    plt.contourf(xx1, xx2, yy)
+    plt.show()
 
     # project data to 10-d space
     rand_matrix = pickle.load(open('pickles/data/10_10_projection_matrix', 'rb'))
@@ -601,7 +606,7 @@ def visualize_regions(N):
 
     model = MLP(in_dim=10, n=32)
     model.to(device)
-    model.load_state_dict(torch.load('pickles/experiment2/models/100_samples_0.25_freq_1000_epochs_0.001_lr/0/model_state_999'))
+    model.load_state_dict(torch.load('pickles/experiment2/models/100_samples_{}_freq_1000_epochs_0.001_lr/0/model_state_999'.format(freq)))
 
     model.eval()
     # for each datapoint, a different row
@@ -640,12 +645,16 @@ def visualize_regions(N):
         S_T[idx] = int(el[0] + '' + el[1]) # concat representations for both layers
     S_T = S_T[:, 0] # drop 2nd dimension as it is duplicate. S_T contains plain integers now
     lamda_R_x = np.array(lamda_R_x)
+    outputs = np.array(outputs)
+
+    # min-max normalization
+    lamda_R_x = (lamda_R_x - lamda_R_x.min()) / (lamda_R_x.max() - lamda_R_x.min())
+    outputs = (outputs - outputs.min()) / (outputs.max() - outputs.min())
     # group points with the same activation pattern. Points = indices of the S_T array
     groups = pd.Series(range(len(S_T))).groupby(S_T, sort=False).apply(list).tolist()
 
-    # lamda_R_x = lamda_R_x.reshape((N, N))
-
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    # LIPSCHITZ PLOT
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
     for group in tqdm(groups): # one plot for each lipschitz constant
         z = np.zeros_like(lamda_R_x)
         lipschitz = lamda_R_x[group[0]]
@@ -653,14 +662,28 @@ def visualize_regions(N):
             z[idx] = lipschitz
             # z[idx] = 1
         z = z.reshape((N, N))
-        im1 = ax.contourf(xx1, xx2, z, levels=np.linspace(0.1, 0.56, 20), cmap='coolwarm', extend='max')
-        im2 = ax.contour(xx1, xx2, z, levels=np.linspace(0.1, 1, 2), colors=['black'], extend='max')
-
-    ax.set_xlabel('x1')
-    ax.set_ylabel('x2')
-    ax.set_title('Lipschitz constant regions')
-    plt.savefig('images/experiment_2/surface_{}_grid'.format(N))
+        im1 = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 50), cmap='coolwarm', extend='max')
+        im2 = ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
+    # ax.scatter(xx1, xx2, marker='.', s=1, edgecolor='black', color='red')
+    plt.axis('off')
+    plt.savefig('images/experiment_2/lipschitz_surface_{}_grid_{}_freq.pdf'.format(N, freq), format='pdf')
     plt.tight_layout()
     plt.show()
-# visualize_regions(200)
+
+    # OUTPUT PLOT
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
+    for group in tqdm(groups):  # one plot for each lipschitz constant
+        z = np.zeros_like(lamda_R_x)
+        for idx in group:
+            z[idx] = outputs[idx]
+            # z[idx] = 1
+        z = z.reshape((N, N))
+        im1 = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 50), cmap='coolwarm', extend='max')
+        im2 = ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
+    # ax.scatter(xx1, xx2, marker='.', s=1, edgecolor='black', color='red')
+    plt.axis('off')
+    plt.savefig('images/experiment_2/output_surface_{}_grid_{}_freq.pdf'.format(N, freq), format='pdf')
+    plt.tight_layout()
+    plt.show()
+visualize_regions(400, 0.75)
 

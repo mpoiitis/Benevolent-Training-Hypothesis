@@ -64,16 +64,19 @@ class CNN(nn.Module):
             nn.Linear(3 * 32 * 32, 3 * 32 * 32),
             nn.ReLU(),
             nn.Unflatten(1, (3, 32, 32)),
-            nn.Conv2d(3, 96, 5),
+            nn.Conv2d(3, 32, 5),
             nn.ReLU(),
-            nn.MaxPool2d(3, 3),
-            nn.Conv2d(96, 384, 5),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(32, 16, 5),
             nn.ReLU(),
-            nn.MaxPool2d(3, 3),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(16, 8, 3),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
             nn.Flatten(),
-            nn.Linear(384, 384), # with 2x2 pooling
+            nn.Linear(8, 4),
             nn.ReLU(),
-            nn.Linear(384, 1),
+            nn.Linear(4, 1),
             nn.Sigmoid()
         )
         self.layers[1].weight.data.copy_(torch.eye(3 * 32 * 32))  # initialize 1st layer's weights to identity
@@ -81,10 +84,11 @@ class CNN(nn.Module):
 
     def forward(self, x):
         for idx, layer in enumerate(self.layers):
+            # print(x.shape)
             if idx == len(self.layers) - 4:  # after convs and flatten, add a residual connection
-                identity = x
+                # identity = x
                 x = layer(x)
-                x += identity
+                # x += identity
             else:
                 x = layer(x)
         return x
