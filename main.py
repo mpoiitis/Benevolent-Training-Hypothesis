@@ -242,6 +242,7 @@ def run_cnn():
         model.load_state_dict(torch.load('cnn_pickles/models/{}_corrupt_{}_bs_{}_epochs_{}_lr/model_state_{}'.format(args.corrupt, args.bs, args.epochs, args.lr, args.epochs - 1)))
     else:
         loss_fn = torch.nn.BCELoss()  # Binary cross entropy
+        # loss_fn = torch.nn.MSELoss()
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=10**(-1/args.decay))
         # TRAIN-TEST
@@ -262,6 +263,8 @@ def run_cnn():
 
         epoch_trajectory = []
         epoch_variance = []
+        distance = []
+        first_bias = 0
         for epoch in range(args.epochs):  # loop over the dataset multiple times
             model.train()
             train_losses = []
@@ -283,26 +286,34 @@ def run_cnn():
                 y_pred = model(x_batch)
                 y_pred = y_pred.view(-1)
 
-                loss = loss_fn(y_pred, y_batch)
+                # loss = loss_fn(y_pred, y_batch)
+                loss = loss_fn(y_pred, y_batch) / 2
                 loss.backward()
                 optimizer.step()
                 train_losses.append(loss.item())
 
-                error = torch.abs(y_pred - y_batch)
+                # error = torch.abs(y_pred - y_batch)
+                error = torch.abs(1 / 1 - y_pred - y_batch)
 
                 # for tracking metrics
                 bias = model.layers[1].bias.cpu().detach().numpy()
+                if epoch == 0 and batch_idx == 0:  # set once for the whole training
+                    first_bias = bias
                 lr = optimizer.param_groups[0]['lr']
                 error = error.cpu().detach().numpy()[0]
                 iter_bias.append(bias)
                 iter_lr.append(lr)
                 iter_error.append(error)
 
+                # metrics
                 if batch_idx > 0:
                     iter_trajectory += np.linalg.norm(bias - prev_bias) / (prev_lr * prev_err)
                 prev_bias = bias
                 prev_lr = lr
                 prev_err = error
+                if epoch > 0 or (epoch == 0 and batch_idx > 0):
+                    dist = np.linalg.norm((bias - first_bias), axis=0)
+                    distance.append(dist)
 
             scheduler.step()  # apply exponential decay
 
@@ -325,10 +336,12 @@ def run_cnn():
                     test_y_batch = test_y_batch.to(device, dtype=torch.float32)
                     test_y_pred = model(test_x_batch)
                     test_y_pred = test_y_pred.view(-1)
-                    loss = loss_fn(test_y_pred, test_y_batch)
+                    # loss = loss_fn(test_y_pred, test_y_batch)
+                    loss = loss_fn(test_y_pred, test_y_batch) / 2
                     test_losses.append(loss.item())
 
-                    test_error = torch.abs(test_y_pred - test_y_batch)
+                    # test_error = torch.abs(test_y_pred - test_y_batch)
+                    test_error = torch.abs(1 / 1 - test_y_pred - test_y_batch)
                     test_iter_error.append(test_error.cpu().detach().numpy()[0])
                 test_epoch_error.append(test_iter_error)
 
@@ -345,10 +358,6 @@ def run_cnn():
                     os.makedirs(directory)
                 torch.save(model.state_dict(), '{}/model_state_{}'.format(directory, epoch))
 
-        np_epoch_bias = np.array(epoch_bias)
-        np_epoch_bias = np.reshape(np_epoch_bias, (-1, np_epoch_bias.shape[2]))
-        first_bias = np.reshape(np_epoch_bias[0], (1, -1))
-        distance = np.linalg.norm((np_epoch_bias - first_bias), axis=1)
         # write first level bias from training to file. Same for lr and error
         directory = 'cnn_pickles/tracked_items/{}_corrupt_{}_bs_{}_epochs'.format(args.corrupt, args.bs, args.epochs)
         if not os.path.exists(directory):
