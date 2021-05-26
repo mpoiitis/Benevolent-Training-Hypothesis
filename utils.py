@@ -50,11 +50,12 @@ class CustomCIFAR10(torchvision.datasets.CIFAR10):
         mapping = {v: k for k, v in enumerate(set(self.targets))}
         self.targets = [mapping[y] for y in self.targets]
 
+
 def parse_args():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter, conflict_handler='resolve')
-    parser.add_argument('-f', '--freq', type=float, default=1, help='Frequency of cos wave')
-    parser.add_argument('-N', '--N', type=int, default=10, help='Number of samples')
-    parser.add_argument('-e', '--epochs', type=int, default=10, help='Number of epochs')
+    parser.add_argument('-f', '--freq', type=float, default=0.5, help='Frequency of cos wave')
+    parser.add_argument('-N', '--N', type=int, default=100, help='Number of samples')
+    parser.add_argument('-e', '--epochs', type=int, default=3000, help='Number of epochs')
     parser.add_argument('-bs', '--bs', type=int, default=1, help='Batch size')
     parser.add_argument('-lr', '--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('-c', '--corrupt', type=float, default=0, help='Label corruption probability')
