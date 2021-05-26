@@ -32,8 +32,6 @@ def plot_data(surface, samples, freq, type='imshow'):
         ax = fig.add_subplot(111)
         ax.imshow(surface['f'], cmap=plt.cm.BrBG, interpolation='nearest', origin='lower', extent=[0, 1, 0, 1])
         ax.scatter(samples['x'], samples['y'], color='black', s=20, zorder=10)
-        cset = ax.contourf(surface['x'], surface['y'], surface['f'], 100, cmap='coolwarm')
-        # plt.colorbar(cset)
     ax.xaxis.set_major_locator(plt.NullLocator())
     ax.yaxis.set_major_locator(plt.NullLocator())
     ax.spines['top'].set_visible(False)
@@ -42,7 +40,7 @@ def plot_data(surface, samples, freq, type='imshow'):
     ax.spines['left'].set_visible(False)
     plt.axis('equal')
     plt.tight_layout()
-    plt.savefig('images/{}/freq_{}_samples_{}.pdf'.format(type, freq, len(samples['x'])), format='pdf')
+    plt.savefig('images/{}/freq_{}_samples_{}.png'.format(type, freq, len(samples['x'])), format='png')
     plt.show()
 
 

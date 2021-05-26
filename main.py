@@ -37,13 +37,13 @@ def run_mlp():
         x = np.vstack((sample_x, sample_y)).T
         test_x = np.vstack((sample_test_x, sample_test_y)).T
 
-        # rand_matrix = np.random.randn(DATA_DIM, DATA_DIM) / np.sqrt(DATA_DIM)
-        # pickle.dump(rand_matrix, open('pickles/data/{}_{}_projection_matrix'.format(DATA_DIM, DATA_DIM), 'wb'))
-
         # WRITE DATA
         directory = 'pickles/data'
         if not os.path.exists(directory):
             os.makedirs(directory)
+
+        rand_matrix = np.random.randn(DATA_DIM, DATA_DIM) / np.sqrt(DATA_DIM)
+        pickle.dump(rand_matrix, open('{}/{}_{}_projection_matrix'.format(directory, DATA_DIM, DATA_DIM), 'wb'))
         pickle.dump(x, open('{}/{}_samples_{}_freq_train_data.pickle'.format(directory, N, freq), 'wb'))
         pickle.dump(y, open('{}/{}_samples_{}_freq_train_labels.pickle'.format(directory, N, freq), 'wb'))
         pickle.dump(test_x, open('{}/{}_freq_test_data.pickle'.format(directory, freq), 'wb'))

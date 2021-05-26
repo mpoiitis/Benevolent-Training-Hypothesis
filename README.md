@@ -7,7 +7,8 @@ Python version: 3.6.8
 
 The experimental phase is based on two different models, an MLP and a CNN model. 
 For both models there is not any kind of normalization, only ReLU activation
-functions are used and the first layer's weights are frozen to Identity. Also: 
+functions are used and the first layer's weights are frozen to Identity. This weight setup enables us
+ to avoid SVD computation on every step. Also: 
 
 - For the MLP, MSE loss is the objective with no activation on the output layer.
 - For the CNN, BCE loss is the objective with sigmoid as the activation of the output layer.
