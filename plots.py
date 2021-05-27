@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import LinearLocator
-from models import MLP
+from models import MLP2
 from utils import smooth, generate_cos_wave, CustomDataset, optimal_x_for_basis_pursuit
 import os
 from tqdm import tqdm
@@ -719,31 +719,31 @@ def visualize_regions(N, freq):
     x = zeros_x
     dataset = CustomDataset(x, y, device)
 
-    # # INPUT PLOT
-    # # min-max normalization
-    # y_norm = (y - y.min()) / (y.max() - y.min())
-    # y_norm = y_norm.reshape((N, N))
-    # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
-    # cax = plt.contourf(xx1, xx2, y_norm, levels=np.linspace(0, 1, 50), cmap='coolwarm')
-    #
-    # # remove ticks and frame. Also use the same x and y scaling
-    # ax.xaxis.set_major_locator(plt.NullLocator())
-    # ax.yaxis.set_major_locator(plt.NullLocator())
-    # ax.spines['top'].set_visible(False)
-    # ax.spines['right'].set_visible(False)
-    # ax.spines['bottom'].set_visible(False)
-    # ax.spines['left'].set_visible(False)
-    # plt.axis('equal')
-    # # adjust colorbar ticks to show unnormalized values
-    # cbar = fig.colorbar(cax, ticks=[0, 0.25, 0.5, 0.75, 1])
-    # cbar.ax.set_yticklabels(np.linspace(np.min(y), np.max(y), 5).round(1), fontsize=12)
-    # plt.savefig('images/experiment_2/ground_truth_{}_grid_{}_freq.pdf'.format(N, freq), format='pdf')
-    # plt.tight_layout()
-    # plt.show()
+    # INPUT PLOT
+    # min-max normalization
+    y_norm = (y - y.min()) / (y.max() - y.min())
+    y_norm = y_norm.reshape((N, N))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
+    cax = plt.contourf(xx1, xx2, y_norm, levels=np.linspace(0, 1, 100), cmap='coolwarm')
+
+    # remove ticks and frame. Also use the same x and y scaling
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    plt.axis('equal')
+    # adjust colorbar ticks to show unnormalized values
+    cbar = fig.colorbar(cax, ticks=[0, 0.25, 0.5, 0.75, 1])
+    cbar.ax.set_yticklabels(np.linspace(np.min(y), np.max(y), 5).round(1), fontsize=12)
+    plt.savefig('images/experiment_2/ground_truth_{}_grid_{}_freq.png'.format(N, freq), format='png')
+    plt.tight_layout()
+    plt.show()
 
     # METRIC EXTRACTION
 
-    model = MLP(in_dim=10, n=32)
+    model = MLP2(in_dim=10, n=32)
     model.to(device)
     model.load_state_dict(torch.load('pickles/experiment2/models/200_samples_{}_freq_1000_epochs_0.001_lr/0/model_state_999'.format(freq)))
 
@@ -783,65 +783,65 @@ def visualize_regions(N, freq):
     # LIPSCHITZ PLOT
 
     lamda_R_x = np.array(lamda_R_x)
-    # # min-max normalization
-    # lamda_R_x_norm = (lamda_R_x - lamda_R_x.min()) / (lamda_R_x.max() - lamda_R_x.min())
-    # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
-    # for group in tqdm(groups): # one plot for each lipschitz constant
-    #     z = np.zeros_like(lamda_R_x_norm)
-    #     lipschitz = lamda_R_x_norm[group[0]]
-    #     for idx in group:
-    #         z[idx] = lipschitz
-    #     z = z.reshape((N, N))
-    #     cax = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 50), cmap='coolwarm', extend='neither')
-    #     ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
-    # ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', edgecolor='black', color='red')
-    #
-    # # remove ticks and frame. Also use the same x and y scaling
-    # ax.xaxis.set_major_locator(plt.NullLocator())
-    # ax.yaxis.set_major_locator(plt.NullLocator())
-    # ax.spines['top'].set_visible(False)
-    # ax.spines['right'].set_visible(False)
-    # ax.spines['bottom'].set_visible(False)
-    # ax.spines['left'].set_visible(False)
-    # plt.axis('equal')
-    # # adjust colorbar ticks to show unnormalized values
-    # cbar = fig.colorbar(cax, ticks=[0.001, 0.25, 0.5, 0.75, 1])
-    # cbar.ax.set_yticklabels(np.linspace(np.min(lamda_R_x), np.max(lamda_R_x), 5).round(1), fontsize=12)
-    # plt.savefig('images/experiment_2/lipschitz_surface_{}_grid_{}_freq.pdf'.format(N, freq), format='pdf')
-    # plt.tight_layout()
-    # plt.show()
-    #
-    # # OUTPUT PLOT
-    #
-    # outputs = np.array(outputs)
-    # # min-max normalization
-    # outputs_norm = (outputs - outputs.min()) / (outputs.max() - outputs.min())
-    # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
-    # for group in tqdm(groups):  # one plot for each lipschitz constant
-    #     z = np.zeros_like(outputs_norm)
-    #     for idx in group:
-    #         z[idx] = outputs_norm[idx]
-    #     z = z.reshape((N, N))
-    #     cax = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 50), cmap='coolwarm', extend='neither')
-    #     ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
-    # ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', edgecolor='black', color='red')
-    #
-    # # remove ticks and frame. Also use the same x and y scaling
-    # ax.xaxis.set_major_locator(plt.NullLocator())
-    # ax.yaxis.set_major_locator(plt.NullLocator())
-    # ax.spines['top'].set_visible(False)
-    # ax.spines['right'].set_visible(False)
-    # ax.spines['bottom'].set_visible(False)
-    # ax.spines['left'].set_visible(False)
-    # plt.axis('equal')
-    # # adjust colorbar ticks to show unnormalized values
-    # cbar = fig.colorbar(cax, ticks=[0.001, 0.25, 0.5, 0.75, 1])
-    # cbar.ax.set_yticklabels(np.linspace(np.min(outputs), np.max(outputs), 5).round(1), fontsize=12)
-    # plt.savefig('images/experiment_2/output_surface_{}_grid_{}_freq.pdf'.format(N, freq), format='pdf')
-    # plt.tight_layout()
-    # plt.show()
+    # min-max normalization
+    lamda_R_x_norm = (lamda_R_x - lamda_R_x.min()) / (lamda_R_x.max() - lamda_R_x.min())
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
+    for group in tqdm(groups): # one plot for each lipschitz constant
+        z = np.zeros_like(lamda_R_x_norm)
+        lipschitz = lamda_R_x_norm[group[0]]
+        for idx in group:
+            z[idx] = lipschitz
+        z = z.reshape((N, N))
+        cax = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 100), cmap='coolwarm', extend='neither')
+        ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
+    ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', edgecolor='black', color='red')
 
-    # COMBINATION PLOT
+    # remove ticks and frame. Also use the same x and y scaling
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    plt.axis('equal')
+    # adjust colorbar ticks to show unnormalized values
+    cbar = fig.colorbar(cax, ticks=[0.001, 0.25, 0.5, 0.75, 1])
+    cbar.ax.set_yticklabels(np.linspace(np.min(lamda_R_x), np.max(lamda_R_x), 5).round(1), fontsize=12)
+    plt.savefig('images/experiment_2/lipschitz_surface_{}_grid_{}_freq.png'.format(N, freq), format='png')
+    plt.tight_layout()
+    plt.show()
+
+    # OUTPUT PLOT
+
+    outputs = np.array(outputs)
+    # min-max normalization
+    outputs_norm = (outputs - outputs.min()) / (outputs.max() - outputs.min())
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
+    for group in tqdm(groups):  # one plot for each lipschitz constant
+        z = np.zeros_like(outputs_norm)
+        for idx in group:
+            z[idx] = outputs_norm[idx]
+        z = z.reshape((N, N))
+        cax = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 100), cmap='coolwarm', extend='neither')
+        ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
+    ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', edgecolor='black', color='red')
+
+    # remove ticks and frame. Also use the same x and y scaling
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    plt.axis('equal')
+    # adjust colorbar ticks to show unnormalized values
+    cbar = fig.colorbar(cax, ticks=[0.001, 0.25, 0.5, 0.75, 1])
+    cbar.ax.set_yticklabels(np.linspace(np.min(outputs), np.max(outputs), 5).round(1), fontsize=12)
+    plt.savefig('images/experiment_2/output_surface_{}_grid_{}_freq.png'.format(N, freq), format='png')
+    plt.tight_layout()
+    plt.show()
+
+    # COMBINATION PLOTS
 
     x = x_train
     y = y_train
@@ -854,23 +854,25 @@ def visualize_regions(N, freq):
     train_dataset = CustomDataset(x, y, device)
 
     # create activation pattern matrix S_T
-    for group in groups:
-        lipschitz = lamda_R_x[group[0]]
 
     S_T = np.empty((10 * 32, len(train_dataset.x)))  # 10 = 1st layer dim, 32 = 2nd layer dim
+    lamda_R_x_train = np.empty((1, len(train_dataset.x)))
     s_train = []
     with torch.no_grad():
         for batch_idx, (x_batch, y_batch) in tqdm(enumerate(zip(train_dataset.x, train_dataset.y))):
             x = x_batch
             kron = 1
+            lipschitz = model.layers[0].weight.data.clone()
             for idx, layer in enumerate(model.layers):
                 if idx % 2 == 0 and idx != 0:  # get activations of dense layers after the initial
-                    s_l_x = torch.diagonal(torch.diag(torch.where(x > 0, 1.0, 0.0).view(-1)))
-                    kron = np.kron(s_l_x.cpu().numpy(), kron).astype(int)
-
+                    s_l_x = torch.diag(torch.where(x > 0, 1.0, 0.0).view(-1))
+                    kron = np.kron(torch.diagonal(s_l_x).cpu().numpy(), kron).astype(int)
+                    W_l = layer.weight.data
+                    lipschitz = torch.matmul(W_l, torch.matmul(s_l_x, lipschitz))  # W_l * S_l * ...
                 x = layer(x)
 
             s_train.append(kron)
+            lamda_R_x_train[:, batch_idx] = torch.norm(lipschitz).cpu().numpy()
             S_T[:, batch_idx] = kron
 
     comparison_train = []  # same as grid data. This has 200 values, the number of train points
@@ -883,66 +885,157 @@ def visualize_regions(N, freq):
         if comparison[i] not in comparison_train:
             res_points.append(i)
 
-    S_T_inv = np.linalg.pinv(S_T)
     distances = {}
-    for point in res_points:
+    qs = {}
+    opts = {}
+    statuses = {}
+    S_T, indices = np.unique(S_T, return_index=True, axis=1)  # keep only unique columns and indices of S_T to solve the linear system
+    lamda_R_x_train = lamda_R_x_train[:, indices]  # keep the lipschitz constants of S_T's unique columns
+    lamda_R_x_train = lamda_R_x_train.reshape(-1)
+    for point in tqdm(res_points):
         s_x = s[point]
-        q = np.matmul(S_T_inv, s_x.T).T
+        q, opt, status = optimal_x_for_basis_pursuit(S_T, s_x.T, lamda_R_x_train)
+        qs.update({point: q})
+        opts.update({point: opt})
+        statuses.update({point: status})
         k = np.count_nonzero(q)
         distances.update({point: k})
-    print('With pseudoinverse:{}'.format(np.unique(np.array(list(distances.values())))))
-
-    # creates an array of indices, sorted by unique element
-    idx_sort = np.argsort(S_T, axis=1)
-
-
-    distances = {}
-    S_T = np.unique(S_T, axis=1)  # keep only unique columns of S_T to solve the linear system
-    for point in res_points:
-        s_x = s[point]
-        q = optimal_x_for_basis_pursuit(S_T, s_x ,)
-        k = np.count_nonzero(q)
-    distances.update({point: k})
     print('With basis pursuit:{}'.format(np.unique(np.array(list(distances.values())))))
 
-    # # create colors for each unique distance
-    # unique_k = np.unique(np.array(list(distances.values())))
-    # colormap = cm.get_cmap('tab20c', len(unique_k))
-    # colors = colormap.colors
-    #
-    # # assign a color to each point
-    # point_colors = []
-    # for i, point in enumerate(dataset.x):
-    #     point = point.cpu().numpy()
-    #     if i in res_points:
-    #         k = distances[i]
-    #         idx = np.where(unique_k == k)
-    #         point_colors.append(colors[idx])
-    #     else:  # for training points
-    #         point_colors.append('red')
-    #
-    # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
-    # for group in tqdm(groups):
-    #     z = np.zeros(dataset.x.shape[0])
-    #     for idx in group:
-    #         z[idx] = 1
-    #     z = z.reshape((N, N))
-    #     levels = np.linspace(0.01, 1.0, len(colors))
-    #     cax = ax.contourf(xx1, xx2, z, levels=levels, colors=point_colors[idx], extend='neither')
-    #     ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
-    #
-    # # remove ticks and frame. Also use the same x and y scaling
-    # ax.xaxis.set_major_locator(plt.NullLocator())
-    # ax.yaxis.set_major_locator(plt.NullLocator())
-    # ax.spines['top'].set_visible(False)
-    # ax.spines['right'].set_visible(False)
-    # ax.spines['bottom'].set_visible(False)
-    # ax.spines['left'].set_visible(False)
-    # # # adjust colorbar ticks to show unnormalized values
-    # # cbar = fig.colorbar(cax, ticks=np.arange(len(colors)))
-    # # cbar.ax.set_yticklabels(unique_k, fontsize=12)
-    # plt.axis('equal')
-    # plt.savefig('images/experiment_2/linear_combinations_{}_grid_{}_freq.pdf'.format(N, freq), format='pdf')
-    # plt.tight_layout()
-    # plt.show()
-# visualize_regions(200, 0.5)
+    # ENABLE THE BELOW IF YOU HAVE SAVED THE LP'S RESULTS, AS IT IS QUITE SLOW
+    # qs = pickle.load(open('pickles/lp_data/qs_from_lp_dict.pickle', 'rb'))
+    # opts = pickle.load(open('pickles/lp_data/opts_from_lp_dict.pickle', 'rb'))
+    # for point in res_points:
+    #     q = qs[point]
+    #     k = np.count_nonzero(q)
+    #     distances.update({point: k})
+
+    # DISTINCTNESS COMBINATION PLOT
+
+    # create colors for each unique distance
+    unique_k = np.unique(np.array(list(distances.values())))
+    colormap = cm.get_cmap('tab20c', len(unique_k))
+    colors = colormap.colors
+    colors = np.append(colors, [[1., 1., 1., 1.]], axis=0)  # add red color for regions of training points
+    unique_k = np.append(unique_k, -1)  # append dummy value for regions of training points
+
+    # assign a color to each point
+    point_colors = []
+    for i, point in enumerate(dataset.x):
+        if i in res_points:
+            k = distances[i]
+            idx = np.where(unique_k == k)
+            point_colors.append(colors[idx])
+        else:  # for training points
+            point_colors.append(colors[-1])
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
+    levels = np.arange(0, len(colors) + 1)
+    for group in tqdm(groups):
+        z = np.full(dataset.x.shape[0], -1)
+        if group[0] in res_points:
+            color_idx = np.where(np.all(colors == point_colors[group[0]], axis=1))[0]  # get index of color
+        else:
+            color_idx = np.where(np.all(colors == [1., 1., 1., 1.], axis=1))[0]  # distinct for the training points
+        for idx in group:
+            z[idx] = 1 + color_idx
+        z = z.reshape((N, N))
+        cax = ax.contourf(xx1, xx2, z, levels=levels, colors=colors, extend='neither')
+        ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
+
+    # remove ticks and frame. Also use the same x and y scaling
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    unique_k = list(unique_k)
+    unique_k[-1] = 'train'
+    # adjust colorbar ticks to show unnormalized values
+    cbar = fig.colorbar(cax, ticks=np.arange(len(colors)))
+    cbar.ax.set_yticklabels(unique_k, fontsize=12)
+
+    plt.axis('equal')
+    plt.savefig('images/experiment_2/linear_combinations_distinct_{}_grid_{}_freq.png'.format(N, freq), format='png')
+    plt.tight_layout()
+    plt.show()
+
+    # GRADIENT COMBINATION PLOT
+    # min-max normalize opts dictionary values
+    new_to_old_opts = {}  # track the unnormalized values for the colorbar later
+    opt_vals = np.array(list(opts.values()))
+    for k in opts:
+        old = opts[k]
+        opts[k] = (opts[k] - opt_vals.min()) / (opt_vals.max() - opt_vals.min())
+        new_to_old_opts[opts[k]] = old
+    # different levels based on the lp result. Contains infeasible points as well
+    distinct_levels = np.unique(np.array(list(opts.values())))
+    # create 100 colors from a colormap
+    colormap = cm.get_cmap('coolwarm', 100)
+    colors = []
+    for lv in distinct_levels[1:]:  # select colors based on the actual distances of opt
+        colors.append(colormap(lv))
+    colors = np.append([[0., 0., 0., 1.]], colors, axis=0)
+    colors = np.append(colors, [[1., 1., 1., 1.]], axis=0)  # add red color for regions of training points
+    distinct_levels = np.append(distinct_levels, -1)  # append dummy value for regions of training points
+
+    # assign a color to each point
+    point_colors = []
+    for i, point in enumerate(dataset.x):
+        point = point.cpu().numpy()
+        if i in res_points:
+            k = opts[i]
+            idx = np.where(distinct_levels == k)
+            point_colors.append(colors[idx])
+        else:  # for training points
+            point_colors.append(colors[-1])
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
+    for group in tqdm(groups):
+        z = np.full(dataset.x.shape[0], -1)
+        if group[0] in res_points:
+            opt = opts[group[0]]
+            i = np.where(distinct_levels == opt)[0]
+        else:
+            i = distinct_levels.shape[0] - 1
+        for idx in group:
+            z[idx] = 1 + i
+        z = z.reshape((N, N))
+        cax = ax.contourf(xx1, xx2, z, levels=np.arange(0, len(distinct_levels)+1), colors=colors, extend='neither')
+        ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
+
+    # remove ticks and frame. Also use the same x and y scaling
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    # adjust colorbar ticks to show unnormalized values
+    for idx, v in enumerate(distinct_levels[1:-1]):
+        distinct_levels[idx+1] = new_to_old_opts[v] # idx + 1 because it starts from 1
+    distinct_levels = np.round(distinct_levels, 2)  # round values for colorbar
+    # rounding creates duplicates that overpopulate the colorbar. Find uniques without default sorting
+    indexes = np.unique(distinct_levels, return_index=True)[1]
+    unique = [distinct_levels[index] for index in sorted(indexes)]
+    unique = list(unique)
+    unique[0] = 'inf'
+    unique[-1] = 'train'
+
+    tick_labels = []
+    for idx, val in enumerate(unique[:-1]):
+        if idx % 3 == 0:
+            tick_labels.append(val)
+        else:
+            tick_labels.append('')
+    tick_labels.append(unique[-1])
+    cbar = fig.colorbar(cax, ticks=np.linspace(0, len(distinct_levels), len(tick_labels)))
+    cbar.ax.set_yticklabels(tick_labels, fontsize=12)
+
+    plt.axis('equal')
+    plt.savefig('images/experiment_2/linear_combinations_gradient_{}_grid_{}_freq.png'.format(N, freq), format='png')
+    plt.tight_layout()
+    plt.show()
+visualize_regions(200, 0.5)

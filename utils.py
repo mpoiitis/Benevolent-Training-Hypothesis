@@ -117,23 +117,24 @@ def corrupt_labels(dataset, corrupt_prob):
     return dataset
 
 
-def optimal_x_for_basis_pursuit(A, y, c):
+def optimal_x_for_basis_pursuit(S_T, s_x, lambda_T_transpose):
     """
     Linear Programming analogue for basis pursuit problem. Adjusted objective λ_T * α is used, according to the original paper
     """
-    x_dim, y_dim = A.shape[1], y.shape[0]
+    x_dim, y_dim = S_T.shape[1], s_x.shape[0]
     eye = np.eye(x_dim)
 
     # original version of basis pursuit uses np.ones(x_dim) instead of c
-    obj = np.concatenate([np.zeros(x_dim), c])
+    obj = np.concatenate([np.zeros(x_dim), lambda_T_transpose])
 
     lhs_ineq = np.concatenate([np.concatenate([eye, -eye], axis=1), np.concatenate([-eye, -eye], axis=1)], axis=0)
     rhs_ineq = np.zeros(2 * x_dim)
 
-    lhs_eq = np.concatenate([A, np.zeros((y_dim, x_dim))], axis=1)
-    rhs_eq = y
+    lhs_eq = np.concatenate([S_T, np.zeros((y_dim, x_dim))], axis=1)
+    rhs_eq = s_x
 
     bnd = [*((None, None) for _ in range(x_dim)), *((0, None) for _ in range(x_dim))]
 
     res = linprog(c=obj, A_ub=lhs_ineq, b_ub=rhs_ineq, A_eq=lhs_eq, b_eq=rhs_eq, bounds=bnd, method="revised simplex")
-    return res.x[:x_dim]
+    return res.x[:x_dim], res.fun, res.status
+
