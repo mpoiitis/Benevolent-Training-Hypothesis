@@ -1038,4 +1038,4 @@ def visualize_regions(N, freq):
     plt.savefig('images/experiment_2/linear_combinations_gradient_{}_grid_{}_freq.png'.format(N, freq), format='png')
     plt.tight_layout()
     plt.show()
-visualize_regions(200, 0.5)
+# visualize_regions(200, 0.5)
