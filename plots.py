@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import LinearLocator
+import seaborn as sns
 from models import MLP2
-from utils import smooth, generate_cos_wave, CustomDataset, optimal_x_for_basis_pursuit
+from utils import smooth, generate_cos_wave, CustomDataset, optimal_x_for_basis_pursuit, saturate
 import os
 from tqdm import tqdm
 
@@ -18,7 +19,11 @@ colormap = cm.get_cmap('RdYlGn_r', 4)
 colors = colormap(range(4))[::-1]
 
 
-def plot_data(surface, samples, freq, type='imshow'):
+def plot_data(surface, samples, freq, N, type='imshow'):
+    colormap = sns.color_palette('RdYlGn_r', n_colors=100)
+    colormap = saturate(colormap, 0.2)
+    colormap = cm.colors.ListedColormap(sns.color_palette(colormap).as_hex())
+
     fig = plt.figure()
     if type == 'surface':
 
@@ -29,9 +34,12 @@ def plot_data(surface, samples, freq, type='imshow'):
         ax.set_zlim(-1, 1)
         ax.zaxis.set_major_locator(LinearLocator(5))
     else:
+        surface['f'] = (surface['f'] - surface['f'].min()) / (surface['f'].max() - surface['f'].min())
+        surface['f'] = surface['f'].reshape((N, N))
         ax = fig.add_subplot(111)
-        ax.imshow(surface['f'], cmap=plt.cm.BrBG, interpolation='nearest', origin='lower', extent=[0, 1, 0, 1])
-        ax.scatter(samples['x'], samples['y'], color='black', s=20, zorder=10)
+        cax = plt.contourf(surface['x'], surface['y'], surface['f'], levels=np.linspace(0, 1, 100), cmap=colormap)
+        # ax.imshow(surface['f'], cmap=colormap, interpolation='nearest', origin='lower', extent=[0, 1, 0, 1])
+        ax.scatter(samples['x'], samples['y'], color='blue', s=20, zorder=10)
     ax.xaxis.set_major_locator(plt.NullLocator())
     ax.yaxis.set_major_locator(plt.NullLocator())
     ax.spines['top'].set_visible(False)
@@ -321,6 +329,108 @@ def plot_corr_metrics(corrupts, bs, epochs, lr):
 # plot_corr_metrics([0.0, 0.2, 0.4, 0.6], 1, 100, 0.0025)
 
 
+def plot_mnist_metrics(points, bs, epochs, lr):
+    dirs = ['mnist_pickles/{}/metrics/mlp_0.0_corrupt_{}_bs_{}_epochs_{}_lr'.format(points, bs, epochs, lr), 'mnist_pickles/{}/metrics/cnn_0.0_corrupt_{}_bs_{}_epochs_{}_lr'.format(points, bs, epochs, lr)]
+
+    train_files = {}
+    test_files = {}
+    total_trajectories = {}
+    for idx, dir in enumerate(dirs):
+        path, dirs, files = next(os.walk("{}".format(dir)))
+        if idx == 0:
+            key = 'mlp'
+        else:
+            key = 'cnn'
+        train_files[key] = [file for file in files if 'train_loss' in file]
+        test_files[key] = [file for file in files if 'test_loss' in file]
+        total_trajectories[key] = [file for file in files if 'trajectory' in file]
+
+    for key in train_files.keys():  # each iter different corruption
+        train_losses = []
+        test_losses = []
+        trajectories = []
+        for i in tqdm(range(len(train_files[key]))):
+            train = joblib.load(open('mnist_pickles/{}/metrics/{}_0.0_corrupt_{}_bs_{}_epochs_{}_lr/train_loss_{}.pickle'.format(points, key, bs, epochs, lr, i), 'rb'))
+            test = joblib.load(open('mnist_pickles/{}/metrics/{}_0.0_corrupt_{}_bs_{}_epochs_{}_lr/test_loss_{}.pickle'.format(points, key, bs, epochs, lr, i), 'rb'))
+            trajectory = joblib.load(open('mnist_pickles/{}/tracked_items/{}_0.0_corrupt_{}_bs_{}_epochs_{}_lr/trajectory_{}'.format(points, key, bs, epochs, lr, i), 'rb'))
+            # convert tensors to float
+            train = [float(i) for i in train]
+            test = [float(i) for i in test]
+            trajectory = [float(i) for i in trajectory]
+
+            train = np.array(train)
+            test = np.array(test)
+            trajectory = np.array(trajectory)
+            # append to iteration lists
+            train_losses.append(train)
+            test_losses.append(test)
+            trajectories.append(trajectory)
+
+        # convert to numpy for ease
+        train_losses = np.array(train_losses)
+        test_losses = np.array(test_losses)
+        trajectories = np.array(trajectories)
+
+        # calc stats
+        mean_train_losses = np.mean(train_losses, axis=0)
+        mean_test_losses = np.mean(test_losses, axis=0)
+        mean_trajectories = np.mean(trajectories, axis=0) / points
+        std_train_losses = np.std(train_losses, axis=0)
+        std_test_losses = np.std(test_losses, axis=0)
+        std_trajectories = np.std(trajectories, axis=0) / points
+
+        # create the utmost dictionary for each corruption
+        train_files[key] = {'mean': mean_train_losses, 'std': std_train_losses}
+        test_files[key] = {'mean': mean_test_losses, 'std': std_test_losses}
+        total_trajectories[key] = {'mean': mean_trajectories, 'std': std_trajectories}
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    for idx, key in enumerate(list(train_files.keys())[::-1]):
+        ax.plot(train_files[key]['mean'], label='{}'.format(key), color=colors[idx])
+        ax.fill_between(np.arange(len(train_files[key]['mean'])), train_files[key]['mean'] - train_files[key]['std'], train_files[key]['mean'] + train_files[key]['std'], color=colors[idx], alpha=0.3)
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Train loss')
+    # ax.set_ylim(-0.01, 0.15)
+    # ax.set_yticks([0, 0.05, 0.1, 0.15])
+    ax.set_xticks([0, 100, 200, 300, 400])  # [0, 100, 200, 300, 400] for 1000, [0, 200, 400, 600, 800] for 2000, [0, 3000, 6000, 9000, 12000] for 6000
+    ax.set_xticklabels([0, 100 * 100, 200 * 100, 300 * 100, 400 * 100])
+    ax.grid(axis='y')
+    plt.legend(loc='upper right', ncol=1, frameon=False)
+    plt.tight_layout()
+    plt.savefig('images/experiment_3/train_loss.pdf', format='pdf')
+    plt.show()
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    for idx, key in enumerate(list(test_files.keys())[::-1]):
+        ax.plot(test_files[key]['mean'], label='{}'.format(key), color=colors[idx])
+        ax.fill_between(np.arange(len(test_files[key]['mean'])), test_files[key]['mean'] - test_files[key]['std'], test_files[key]['mean'] + test_files[key]['std'], color=colors[idx], alpha=0.3)
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Test loss')
+    ax.set_ylim(-0.01, 0.15)
+    ax.set_yticks([0, 0.05, 0.1, 0.15])
+    ax.set_xticks([0, 100, 200, 300])
+    ax.set_xticklabels([0, 100 * 120, 200 * 120, 300 * 120])  # * 120 for 1000, 2000 points
+    ax.grid(axis='y')
+    plt.tight_layout()
+    plt.savefig('images/experiment_3/test_loss.pdf', format='pdf')
+    plt.show()
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    for idx, key in enumerate(list(total_trajectories.keys())[::-1]):
+        ax.plot(total_trajectories[key]['mean'], label=''.format(key), color=colors[idx])
+        ax.fill_between(np.arange(len(total_trajectories[key]['mean'])), total_trajectories[key]['mean'] - total_trajectories[key]['std'], total_trajectories[key]['mean'] + total_trajectories[key]['std'], color=colors[idx], alpha=0.3)
+    ax.set_ylabel('Bias trajectory length (per epoch)')
+    ax.set_xlabel('Iteration')
+    ax.set_xticks([0, 5, 10, 15, 20])
+    ax.set_xticklabels([0, 5 * 200, 10 * 200, 15 * 200, 20 * 200])
+    ax.grid(axis='y')
+    plt.legend(loc='upper left', ncol=1, frameon=False)
+    plt.tight_layout()
+    plt.savefig('images/experiment_3/trajectory.pdf', format='pdf')
+    plt.show()
+# plot_mnist_metrics(1000, 1, 20, 0.0025)
+
+
 def adjacent_values(vals, q1, q3):
     upper_adjacent_value = q3 + (q3 - q1) * 1.5
     upper_adjacent_value = np.clip(upper_adjacent_value, q3, vals[-1])
@@ -445,7 +555,7 @@ def plot_trajectory_variance_distance_mlp(N, freqs, epochs):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
     # iterate with reverse order to plot smaller frequencies on top
     for idx, freq in enumerate(list(trajectory.keys())[::-1]):
-        ax.plot(trajectory[freq], label='Freq: {}'.format(freq), color=colors[idx], alpha=0.3)
+        ax.plot(trajectory[freq], label='freq={}'.format(freq), color=colors[idx], alpha=0.3)
         smoothed = smooth(trajectory[freq])
         ax.plot(smoothed, color=colors[idx])
     ax.set_ylabel('Bias trajectory length (per epoch)')
@@ -460,7 +570,7 @@ def plot_trajectory_variance_distance_mlp(N, freqs, epochs):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
     # iterate with reverse order to plot smaller frequencies on top
     for idx, freq in enumerate(list(integral_trajectory.keys())[::-1]):
-        ax.plot(integral_trajectory[freq], label='Freq: {}'.format(freq), color=colors[idx])
+        ax.plot(integral_trajectory[freq], label='freq={}'.format(freq), color=colors[idx])
     ax.set_ylabel('Bias trajectory length (total)')
     ax.set_xlabel('Epoch')
     ax.grid(axis='y')
@@ -504,7 +614,7 @@ def plot_trajectory_variance_distance_mlp(N, freqs, epochs):
     # LIPSCHITZ
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
     for idx, freq in enumerate(list(lip_const.keys())[::-1]):
-        ax.plot(lip_const[freq], label='Freq: {}'.format(freq), color=colors[idx], alpha=0.3)
+        ax.plot(lip_const[freq], label='freq= {}'.format(freq), color=colors[idx], alpha=0.3)
         smoothed = smooth(lip_const[freq])
         ax.plot(smoothed, color=colors[idx])
     ax.set_ylabel('Lipschitz constant')
@@ -569,7 +679,7 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs, lr):
     fig, ax = plt.subplots(nrows=1, ncols=1,  figsize=[7, 4.8])
     # iterate with reverse order to plot smaller corruptions on top
     for idx, corrupt in enumerate(corrupts[::-1]):
-        ax.plot(list(total_trajectories[corrupt]), label='Corruption: {}'.format(corrupt), color=colors[idx])
+        ax.plot(list(total_trajectories[corrupt]), label='corruption={}'.format(corrupt), color=colors[idx])
     ax.set_ylabel('Bias trajectory length (per epoch)')
     ax.set_xlabel('Epoch')
     ax.set_ylim(-0.01, 0.71)
@@ -584,7 +694,7 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs, lr):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
     # iterate with reverse order to plot smaller corruptions on top
     for idx, corrupt in enumerate(corrupts[::-1]):
-        ax.plot(list(total_integrals[corrupt]), label='Corruption: {}'.format(corrupt), color=colors[idx])
+        ax.plot(list(total_integrals[corrupt]), label='corruption={}'.format(corrupt), color=colors[idx])
     ax.set_ylabel('Bias trajectory length (total)')
     ax.set_xlabel('Epoch')
     # ax.set_ylim(-0.01, 0.71)
@@ -719,12 +829,18 @@ def visualize_regions(N, freq):
     x = zeros_x
     dataset = CustomDataset(x, y, device)
 
+    # use sns cmap as it can be saturated manually and then turn to matplotlib cmap
+    colormap = sns.color_palette('RdYlGn_r', n_colors=100)
+    colormap = saturate(colormap, 0.2)
+    colormap = cm.colors.ListedColormap(sns.color_palette(colormap).as_hex())
+
     # INPUT PLOT
     # min-max normalization
     y_norm = (y - y.min()) / (y.max() - y.min())
     y_norm = y_norm.reshape((N, N))
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
-    cax = plt.contourf(xx1, xx2, y_norm, levels=np.linspace(0, 1, 100), cmap='coolwarm')
+    cax = plt.contourf(xx1, xx2, y_norm, levels=np.linspace(0, 1, 100), cmap=colormap)
+    ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', color='blue')
 
     # remove ticks and frame. Also use the same x and y scaling
     ax.xaxis.set_major_locator(plt.NullLocator())
@@ -792,9 +908,9 @@ def visualize_regions(N, freq):
         for idx in group:
             z[idx] = lipschitz
         z = z.reshape((N, N))
-        cax = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 100), cmap='coolwarm', extend='neither')
+        cax = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 100), cmap=colormap, extend='neither')
         ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
-    ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', edgecolor='black', color='red')
+    ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', color='blue')
 
     # remove ticks and frame. Also use the same x and y scaling
     ax.xaxis.set_major_locator(plt.NullLocator())
@@ -822,9 +938,9 @@ def visualize_regions(N, freq):
         for idx in group:
             z[idx] = outputs_norm[idx]
         z = z.reshape((N, N))
-        cax = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 100), cmap='coolwarm', extend='neither')
+        cax = ax.contourf(xx1, xx2, z, levels=np.linspace(0.001, 1, 100), cmap=colormap, extend='neither')
         ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
-    ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', edgecolor='black', color='red')
+    ax.scatter(x_train[:, 0], x_train[:, 1], marker='.', color='blue')
 
     # remove ticks and frame. Also use the same x and y scaling
     ax.xaxis.set_major_locator(plt.NullLocator())
@@ -886,80 +1002,80 @@ def visualize_regions(N, freq):
             res_points.append(i)
 
     distances = {}
-    qs = {}
-    opts = {}
-    statuses = {}
-    S_T, indices = np.unique(S_T, return_index=True, axis=1)  # keep only unique columns and indices of S_T to solve the linear system
-    lamda_R_x_train = lamda_R_x_train[:, indices]  # keep the lipschitz constants of S_T's unique columns
-    lamda_R_x_train = lamda_R_x_train.reshape(-1)
-    for point in tqdm(res_points):
-        s_x = s[point]
-        q, opt, status = optimal_x_for_basis_pursuit(S_T, s_x.T, lamda_R_x_train)
-        qs.update({point: q})
-        opts.update({point: opt})
-        statuses.update({point: status})
-        k = np.count_nonzero(q)
-        distances.update({point: k})
-    print('With basis pursuit:{}'.format(np.unique(np.array(list(distances.values())))))
-
-    # ENABLE THE BELOW IF YOU HAVE SAVED THE LP'S RESULTS, AS IT IS QUITE SLOW
-    # qs = pickle.load(open('pickles/lp_data/qs_from_lp_dict.pickle', 'rb'))
-    # opts = pickle.load(open('pickles/lp_data/opts_from_lp_dict.pickle', 'rb'))
-    # for point in res_points:
-    #     q = qs[point]
+    # qs = {}
+    # opts = {}
+    # statuses = {}
+    # S_T, indices = np.unique(S_T, return_index=True, axis=1)  # keep only unique columns and indices of S_T to solve the linear system
+    # lamda_R_x_train = lamda_R_x_train[:, indices]  # keep the lipschitz constants of S_T's unique columns
+    # lamda_R_x_train = lamda_R_x_train.reshape(-1)
+    # for point in tqdm(res_points):
+    #     s_x = s[point]
+    #     q, opt, status = optimal_x_for_basis_pursuit(S_T, s_x.T, lamda_R_x_train)
+    #     qs.update({point: q})
+    #     opts.update({point: opt})
+    #     statuses.update({point: status})
     #     k = np.count_nonzero(q)
     #     distances.update({point: k})
+    # print('With basis pursuit:{}'.format(np.unique(np.array(list(distances.values())))))
+
+    # ENABLE THE BELOW IF YOU HAVE SAVED THE LP'S RESULTS, AS IT IS QUITE SLOW
+    qs = pickle.load(open('pickles/lp_data/qs_from_lp_dict.pickle', 'rb'))
+    opts = pickle.load(open('pickles/lp_data/opts_from_lp_dict.pickle', 'rb'))
+    for point in res_points:
+        q = qs[point]
+        k = np.count_nonzero(q)
+        distances.update({point: k})
 
     # DISTINCTNESS COMBINATION PLOT
 
-    # create colors for each unique distance
-    unique_k = np.unique(np.array(list(distances.values())))
-    colormap = cm.get_cmap('tab20c', len(unique_k))
-    colors = colormap.colors
-    colors = np.append(colors, [[1., 1., 1., 1.]], axis=0)  # add red color for regions of training points
-    unique_k = np.append(unique_k, -1)  # append dummy value for regions of training points
-
-    # assign a color to each point
-    point_colors = []
-    for i, point in enumerate(dataset.x):
-        if i in res_points:
-            k = distances[i]
-            idx = np.where(unique_k == k)
-            point_colors.append(colors[idx])
-        else:  # for training points
-            point_colors.append(colors[-1])
-
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
-    levels = np.arange(0, len(colors) + 1)
-    for group in tqdm(groups):
-        z = np.full(dataset.x.shape[0], -1)
-        if group[0] in res_points:
-            color_idx = np.where(np.all(colors == point_colors[group[0]], axis=1))[0]  # get index of color
-        else:
-            color_idx = np.where(np.all(colors == [1., 1., 1., 1.], axis=1))[0]  # distinct for the training points
-        for idx in group:
-            z[idx] = 1 + color_idx
-        z = z.reshape((N, N))
-        cax = ax.contourf(xx1, xx2, z, levels=levels, colors=colors, extend='neither')
-        ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
-
-    # remove ticks and frame. Also use the same x and y scaling
-    ax.xaxis.set_major_locator(plt.NullLocator())
-    ax.yaxis.set_major_locator(plt.NullLocator())
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    unique_k = list(unique_k)
-    unique_k[-1] = 'train'
-    # adjust colorbar ticks to show unnormalized values
-    cbar = fig.colorbar(cax, ticks=np.arange(len(colors)))
-    cbar.ax.set_yticklabels(unique_k, fontsize=12)
-
-    plt.axis('equal')
-    plt.savefig('images/experiment_2/linear_combinations_distinct_{}_grid_{}_freq.png'.format(N, freq), format='png')
-    plt.tight_layout()
-    plt.show()
+    # # create colors for each unique distance
+    # unique_k = np.unique(np.array(list(distances.values())))
+    # colormap = cm.get_cmap('tab20c', len(unique_k))
+    # colors = colormap.colors
+    # colors = np.append(colors, [[1., 1., 1., 1.]], axis=0)  # add red color for regions of training points
+    # unique_k = np.append(unique_k, -1)  # append dummy value for regions of training points
+    #
+    # # assign a color to each point
+    # point_colors = []
+    # for i, point in enumerate(dataset.x):
+    #     if i in res_points:
+    #         k = distances[i]
+    #         idx = np.where(unique_k == k)
+    #         point_colors.append(colors[idx])
+    #     else:  # for training points
+    #         point_colors.append(colors[-1])
+    #
+    # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
+    # levels = np.arange(0, len(colors) + 1)
+    # for group in tqdm(groups):
+    #     z = np.full(dataset.x.shape[0], -1)
+    #     if group[0] in res_points:
+    #         color_idx = np.where(np.all(colors == point_colors[group[0]], axis=1))[0]  # get index of color
+    #     else:
+    #         color_idx = np.where(np.all(colors == [1., 1., 1., 1.], axis=1))[0]  # distinct for the training points
+    #     for idx in group:
+    #         z[idx] = 1 + color_idx
+    #     z = z.reshape((N, N))
+    #     cax = ax.contourf(xx1, xx2, z, levels=levels, colors=colors, extend='neither')
+    #     ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
+    #
+    # # remove ticks and frame. Also use the same x and y scaling
+    # ax.xaxis.set_major_locator(plt.NullLocator())
+    # ax.yaxis.set_major_locator(plt.NullLocator())
+    # ax.spines['top'].set_visible(False)
+    # ax.spines['right'].set_visible(False)
+    # ax.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+    # unique_k = list(unique_k)
+    # unique_k[-1] = 'train'
+    # # adjust colorbar ticks to show unnormalized values
+    # cbar = fig.colorbar(cax, ticks=np.arange(len(colors)))
+    # cbar.ax.set_yticklabels(unique_k, fontsize=12)
+    #
+    # plt.axis('equal')
+    # plt.savefig('images/experiment_2/linear_combinations_distinct_{}_grid_{}_freq.png'.format(N, freq), format='png')
+    # plt.tight_layout()
+    # plt.show()
 
     # GRADIENT COMBINATION PLOT
     # min-max normalize opts dictionary values
@@ -972,12 +1088,11 @@ def visualize_regions(N, freq):
     # different levels based on the lp result. Contains infeasible points as well
     distinct_levels = np.unique(np.array(list(opts.values())))
     # create 100 colors from a colormap
-    colormap = cm.get_cmap('coolwarm', 100)
     colors = []
     for lv in distinct_levels[1:]:  # select colors based on the actual distances of opt
         colors.append(colormap(lv))
-    colors = np.append([[0., 0., 0., 1.]], colors, axis=0)
-    colors = np.append(colors, [[1., 1., 1., 1.]], axis=0)  # add red color for regions of training points
+    colors = np.append([[0.2, 0.2, 0.2, 1.]], colors, axis=0)  # add black color for regions of training points
+    colors = np.append(colors, [[1., 1., 1., 1.]], axis=0)  # add white color for regions of training points
     distinct_levels = np.append(distinct_levels, -1)  # append dummy value for regions of training points
 
     # assign a color to each point

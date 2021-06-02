@@ -1,4 +1,5 @@
 import os
+import colorsys
 import torch
 import numpy as np
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -49,6 +50,35 @@ class CustomCIFAR10(torchvision.datasets.CIFAR10):
         # renumber remaining labels from 0
         mapping = {v: k for k, v in enumerate(set(self.targets))}
         self.targets = [mapping[y] for y in self.targets]
+
+
+class CustomMNIST(torchvision.datasets.MNIST):
+    """
+    This dataset keeps only the CIFAR10 classes that are not contained in the exclude_list argument.
+    This applies to both data and targets.
+    """
+    def __init__(self, *args, exclude_list=[], **kwargs):
+        super(CustomMNIST, self).__init__(*args, **kwargs)
+        classDict = {'0 - zero': 0, '1 - one': 1, '2 - two': 2, '3 - three': 3, '4 - four': 4, '5 - five': 5, '6 - six': 6, '7 - seven': 7, '8 - eight': 8, '9 - nine': 9}
+        if exclude_list == []:
+            return
+        class_exclude_list = [list(classDict.keys())[list(classDict.values()).index(idx)] for idx in exclude_list]
+
+        labels = np.array(self.targets)
+        classes = np.array(self.classes)
+        exclude = np.array(exclude_list).reshape(1, -1)
+        class_exclude = np.array(class_exclude_list).reshape(1, -1)
+        mask = ~(labels.reshape(-1, 1) == exclude).any(axis=1)
+        class_mask = ~(classes.reshape(-1, 1) == class_exclude).any(axis=1)
+
+        self.data = self.data[mask]
+        self.targets = labels[mask].tolist()
+        self.classes = classes[class_mask]
+
+        # renumber remaining labels from 0
+        mapping = {v: k for k, v in enumerate(set(self.targets))}
+        self.targets = [mapping[y] for y in self.targets]
+        self.targets = np.array(self.targets)
 
 
 def parse_args():
@@ -138,3 +168,51 @@ def optimal_x_for_basis_pursuit(S_T, s_x, lambda_T_transpose):
     res = linprog(c=obj, A_ub=lhs_ineq, b_ub=rhs_ineq, A_eq=lhs_eq, b_eq=rhs_eq, bounds=bnd, method="revised simplex")
     return res.x[:x_dim], res.fun, res.status
 
+
+def alter(alist, col, factor=1.1):
+    tmp = np.array(alist)
+    tmp[:, col] = tmp[:, col] * factor
+    tmp[tmp > 1] = 1
+    tmp[tmp < 0] = 0
+
+    new = []
+    for row in tmp.tolist():
+        new.append(tuple(row))
+
+    return new
+
+
+def rgb2hls(alist):
+    alist = alist[:]
+    for i, row in enumerate(alist):
+        hls = colorsys.rgb_to_hls(row[0], row[1], row[2])
+        alist[i] = hls
+    return alist
+
+
+def hls2rgb(alist):
+    alist = alist[:]
+    for i, row in enumerate(alist):
+        hls = colorsys.hls_to_rgb(row[0], row[1], row[2])
+        alist[i] = hls
+    return alist
+
+
+def saturate(alist, increase=0.2):
+    factor = 1 + increase
+    hls = rgb2hls(alist)
+    new = alter(hls, 2, factor=factor)
+    rgb = hls2rgb(new)
+    return rgb
+
+
+def keep_sample(dataset, N):
+    class_1_idx = np.argwhere(dataset.targets == 0).reshape(-1)
+    class_2_idx = np.argwhere(dataset.targets == 1).reshape(-1)
+    class_1_idx = class_1_idx[:N]
+    class_2_idx = class_2_idx[:N]
+    idx = list(class_1_idx)
+    idx.extend(class_2_idx)
+    dataset.data = dataset.data[idx]
+    dataset.targets = dataset.targets[idx]
+    return dataset

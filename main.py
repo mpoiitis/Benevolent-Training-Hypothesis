@@ -4,8 +4,8 @@ import pickle
 import joblib
 import numpy as np
 import torchvision.transforms as transforms
-from utils import CustomDataset, CustomCIFAR10, parse_args, get_file_count, corrupt_labels
-from models import MLP, CNN
+from utils import CustomDataset, CustomCIFAR10, CustomMNIST, parse_args, get_file_count, corrupt_labels, keep_sample
+from models import MLP, CNN, CNN_MNIST, MLP_MNIST
 from tqdm import tqdm
 
 
@@ -348,10 +348,128 @@ def run_cnn():
         joblib.dump(avg_test_errors, open('{}/avg_test_error_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
 
 
+def run_mnist_exp():
+    # DATASET CREATION
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5), (0.5))])
+    # select only 2 classes, airplane and dog
+    custom_trainset = CustomMNIST(root='./data', train=True, download=True, transform=transform, exclude_list=[0, 1, 2, 4, 5, 7, 8, 9])
+    custom_testset = CustomMNIST(root='./data', train=False, download=True, transform=transform, exclude_list=[0, 1, 2, 4, 5, 7, 8, 9])
+
+    # keep specific number of samples
+    custom_trainset = keep_sample(custom_trainset, 1000)
+    custom_testset = keep_sample(custom_testset, 900)
+
+    trainloader = torch.utils.data.DataLoader(custom_trainset, batch_size=args.bs, shuffle=True)
+    testloader = torch.utils.data.DataLoader(custom_testset, batch_size=args.bs, shuffle=False)
+
+    # MODEL
+    if args.cnn:
+        model = CNN_MNIST()
+    else:
+        model = MLP_MNIST()
+
+    model.to(device)
+    if args.load_model:
+        # LOAD MODEL
+        if not args.cnn:
+            model.load_state_dict(torch.load('mnist_pickles/models/mlp_{}_corrupt_{}_bs_{}_epochs_{}_lr/model_state_{}'.format(args.corrupt, args.bs, args.epochs, args.lr, args.epochs - 1)))
+        else:
+            model.load_state_dict(torch.load('mnist_pickles/models/cnn_{}_corrupt_{}_bs_{}_epochs_{}_lr/model_state_{}'.format(args.corrupt, args.bs, args.epochs, args.lr, args.epochs - 1)))
+    else:
+        loss_fn = torch.nn.BCELoss()  # Binary cross entropy
+        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+
+        # TRAIN-TEST
+        write_train_losses = []
+        write_test_losses = []
+        write_trajectory = []
+
+        # get file count. Find the last repeat of the same experiment to append number in the saved file name
+        if not args.cnn:
+            directory = 'mnist_pickles/metrics/mlp_{}_corrupt_{}_bs_{}_epochs_{}_lr'.format(args.corrupt, args.bs, args.epochs, args.lr)
+        else:
+            directory = 'mnist_pickles/metrics/cnn_{}_corrupt_{}_bs_{}_epochs_{}_lr'.format(args.corrupt, args.bs, args.epochs, args.lr)
+        file_count = get_file_count(directory, 'train_loss')
+
+        for epoch in range(args.epochs):
+            # TRAIN
+            train_losses = []
+            trajectories = []
+
+            prev_bias = 0
+            prev_lr = 0
+            prev_epsilon = 0
+            for batch_idx, (x_batch, y_batch) in enumerate(trainloader):
+                x_batch = x_batch.to(device)
+                y_batch = y_batch.to(device, dtype=torch.float32)
+                optimizer.zero_grad()
+                y_pred = model(x_batch)
+                y_pred = y_pred.view(-1)
+
+                loss = loss_fn(y_pred, y_batch) / 2
+                loss.backward()
+                optimizer.step()
+                train_losses.append(loss.item())
+
+                epsilon = torch.abs(1 / 1 - y_pred - y_batch)  # epsilon is not error!
+                # metrics tracking. In CNNs these metrics are tracked during training, as the raw bias files are too heavy to save
+                bias = model.layers[1].bias.cpu().detach().numpy()
+                lr = optimizer.param_groups[0]['lr']
+                epsilon = epsilon.cpu().detach().numpy()[0]
+                if batch_idx > 0:
+                    trajectory = np.linalg.norm(bias - prev_bias) / (prev_lr * prev_epsilon)
+                    trajectories.append(trajectory)
+                prev_bias = bias
+                prev_lr = lr
+                prev_epsilon = epsilon
+
+                # average over 100 iterations train loss and trajectory. Also calculate the whole test set loss
+                if batch_idx % 100 == 0 and batch_idx != 0:
+                    # TRAIN
+                    write_train_losses.append(np.mean(train_losses))
+                    train_losses = []  # clear losses
+
+                    write_trajectory.append(np.mean(trajectories))
+                    trajectories = []  # clear trajectory
+                    # TEST
+                    test_losses = []
+                    model.eval()
+                    with torch.no_grad():
+                        for (test_x_batch, test_y_batch) in testloader:
+                            test_x_batch = test_x_batch.to(device)
+                            test_y_batch = test_y_batch.to(device, dtype=torch.float32)
+                            test_y_pred = model(test_x_batch)
+                            test_y_pred = test_y_pred.view(-1)
+
+                            loss = loss_fn(test_y_pred, test_y_batch) / 2
+                            test_losses.append(loss.item())
+                    write_test_losses.append(np.mean(test_losses))
+                    model.train()
+
+            print('epoch : {}, train loss : {:.4f}, test loss : {:.4f}'.format(epoch + 1, write_train_losses[-1], write_test_losses[-1]))
+
+        if not args.cnn:
+            directory = 'mnist_pickles/tracked_items/mlp_{}_corrupt_{}_bs_{}_epochs_{}_lr'.format(args.corrupt, args.bs, args.epochs, args.lr)
+        else:
+            directory = 'mnist_pickles/tracked_items/cnn_{}_corrupt_{}_bs_{}_epochs_{}_lr'.format(args.corrupt, args.bs, args.epochs, args.lr)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        joblib.dump(write_trajectory, open('{}/trajectory_{}'.format(directory, file_count), 'wb'), compress=True)
+        if not args.cnn:
+            directory = 'mnist_pickles/metrics/mlp_{}_corrupt_{}_bs_{}_epochs_{}_lr'.format(args.corrupt, args.bs, args.epochs, args.lr)
+        else:
+            directory = 'mnist_pickles/metrics/cnn_{}_corrupt_{}_bs_{}_epochs_{}_lr'.format(args.corrupt, args.bs, args.epochs, args.lr)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        joblib.dump(write_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
+        joblib.dump(write_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
+
+
 if __name__ == '__main__':
     for i in tqdm(range(args.repeats)):
-        if args.cnn:
-            run_cnn()
-        else:
-            run_mlp()
+        # if args.cnn:
+        #     run_cnn()
+        # else:
+        #     run_mlp()
 
+        run_mnist_exp()
