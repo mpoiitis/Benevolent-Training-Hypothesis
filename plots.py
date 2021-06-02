@@ -38,7 +38,6 @@ def plot_data(surface, samples, freq, N, type='imshow'):
         surface['f'] = surface['f'].reshape((N, N))
         ax = fig.add_subplot(111)
         cax = plt.contourf(surface['x'], surface['y'], surface['f'], levels=np.linspace(0, 1, 100), cmap=colormap)
-        # ax.imshow(surface['f'], cmap=colormap, interpolation='nearest', origin='lower', extent=[0, 1, 0, 1])
         ax.scatter(samples['x'], samples['y'], color='blue', s=20, zorder=10)
     ax.xaxis.set_major_locator(plt.NullLocator())
     ax.yaxis.set_major_locator(plt.NullLocator())
@@ -759,8 +758,6 @@ def plot_separate(corrupts, bs, epochs):
     for corr in train_files.keys(): # each iter different corruption
         train_losses = []
         test_losses = []
-        train_errors = []
-        test_errors = []
         for i in tqdm(range(len(train_files[corr]))):
             train = joblib.load(open('cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs/train_loss_{}.pickle'.format(corr, bs, epochs, i), 'rb'))
             test = joblib.load(open('cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs/test_loss_{}.pickle'.format(corr, bs, epochs, i), 'rb'))
@@ -1002,80 +999,80 @@ def visualize_regions(N, freq):
             res_points.append(i)
 
     distances = {}
-    # qs = {}
-    # opts = {}
-    # statuses = {}
-    # S_T, indices = np.unique(S_T, return_index=True, axis=1)  # keep only unique columns and indices of S_T to solve the linear system
-    # lamda_R_x_train = lamda_R_x_train[:, indices]  # keep the lipschitz constants of S_T's unique columns
-    # lamda_R_x_train = lamda_R_x_train.reshape(-1)
-    # for point in tqdm(res_points):
-    #     s_x = s[point]
-    #     q, opt, status = optimal_x_for_basis_pursuit(S_T, s_x.T, lamda_R_x_train)
-    #     qs.update({point: q})
-    #     opts.update({point: opt})
-    #     statuses.update({point: status})
-    #     k = np.count_nonzero(q)
-    #     distances.update({point: k})
-    # print('With basis pursuit:{}'.format(np.unique(np.array(list(distances.values())))))
-
-    # ENABLE THE BELOW IF YOU HAVE SAVED THE LP'S RESULTS, AS IT IS QUITE SLOW
-    qs = pickle.load(open('pickles/lp_data/qs_from_lp_dict.pickle', 'rb'))
-    opts = pickle.load(open('pickles/lp_data/opts_from_lp_dict.pickle', 'rb'))
-    for point in res_points:
-        q = qs[point]
+    qs = {}
+    opts = {}
+    statuses = {}
+    S_T, indices = np.unique(S_T, return_index=True, axis=1)  # keep only unique columns and indices of S_T to solve the linear system
+    lamda_R_x_train = lamda_R_x_train[:, indices]  # keep the lipschitz constants of S_T's unique columns
+    lamda_R_x_train = lamda_R_x_train.reshape(-1)
+    for point in tqdm(res_points):
+        s_x = s[point]
+        q, opt, status = optimal_x_for_basis_pursuit(S_T, s_x.T, lamda_R_x_train)
+        qs.update({point: q})
+        opts.update({point: opt})
+        statuses.update({point: status})
         k = np.count_nonzero(q)
         distances.update({point: k})
+    print('With basis pursuit:{}'.format(np.unique(np.array(list(distances.values())))))
+
+    # # ENABLE THE BELOW IF YOU HAVE SAVED THE LP'S RESULTS, AS IT IS QUITE SLOW
+    # qs = pickle.load(open('pickles/lp_data/qs_from_lp_dict.pickle', 'rb'))
+    # opts = pickle.load(open('pickles/lp_data/opts_from_lp_dict.pickle', 'rb'))
+    # for point in res_points:
+    #     q = qs[point]
+    #     k = np.count_nonzero(q)
+    #     distances.update({point: k})
 
     # DISTINCTNESS COMBINATION PLOT
 
-    # # create colors for each unique distance
-    # unique_k = np.unique(np.array(list(distances.values())))
-    # colormap = cm.get_cmap('tab20c', len(unique_k))
-    # colors = colormap.colors
-    # colors = np.append(colors, [[1., 1., 1., 1.]], axis=0)  # add red color for regions of training points
-    # unique_k = np.append(unique_k, -1)  # append dummy value for regions of training points
-    #
-    # # assign a color to each point
-    # point_colors = []
-    # for i, point in enumerate(dataset.x):
-    #     if i in res_points:
-    #         k = distances[i]
-    #         idx = np.where(unique_k == k)
-    #         point_colors.append(colors[idx])
-    #     else:  # for training points
-    #         point_colors.append(colors[-1])
-    #
-    # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
-    # levels = np.arange(0, len(colors) + 1)
-    # for group in tqdm(groups):
-    #     z = np.full(dataset.x.shape[0], -1)
-    #     if group[0] in res_points:
-    #         color_idx = np.where(np.all(colors == point_colors[group[0]], axis=1))[0]  # get index of color
-    #     else:
-    #         color_idx = np.where(np.all(colors == [1., 1., 1., 1.], axis=1))[0]  # distinct for the training points
-    #     for idx in group:
-    #         z[idx] = 1 + color_idx
-    #     z = z.reshape((N, N))
-    #     cax = ax.contourf(xx1, xx2, z, levels=levels, colors=colors, extend='neither')
-    #     ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
-    #
-    # # remove ticks and frame. Also use the same x and y scaling
-    # ax.xaxis.set_major_locator(plt.NullLocator())
-    # ax.yaxis.set_major_locator(plt.NullLocator())
-    # ax.spines['top'].set_visible(False)
-    # ax.spines['right'].set_visible(False)
-    # ax.spines['bottom'].set_visible(False)
-    # ax.spines['left'].set_visible(False)
-    # unique_k = list(unique_k)
-    # unique_k[-1] = 'train'
-    # # adjust colorbar ticks to show unnormalized values
-    # cbar = fig.colorbar(cax, ticks=np.arange(len(colors)))
-    # cbar.ax.set_yticklabels(unique_k, fontsize=12)
-    #
-    # plt.axis('equal')
-    # plt.savefig('images/experiment_2/linear_combinations_distinct_{}_grid_{}_freq.png'.format(N, freq), format='png')
-    # plt.tight_layout()
-    # plt.show()
+    # create colors for each unique distance
+    unique_k = np.unique(np.array(list(distances.values())))
+    colormap = cm.get_cmap('tab20c', len(unique_k))
+    colors = colormap.colors
+    colors = np.append(colors, [[1., 1., 1., 1.]], axis=0)  # add red color for regions of training points
+    unique_k = np.append(unique_k, -1)  # append dummy value for regions of training points
+
+    # assign a color to each point
+    point_colors = []
+    for i, point in enumerate(dataset.x):
+        if i in res_points:
+            k = distances[i]
+            idx = np.where(unique_k == k)
+            point_colors.append(colors[idx])
+        else:  # for training points
+            point_colors.append(colors[-1])
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[6.4, 4.8])
+    levels = np.arange(0, len(colors) + 1)
+    for group in tqdm(groups):
+        z = np.full(dataset.x.shape[0], -1)
+        if group[0] in res_points:
+            color_idx = np.where(np.all(colors == point_colors[group[0]], axis=1))[0]  # get index of color
+        else:
+            color_idx = np.where(np.all(colors == [1., 1., 1., 1.], axis=1))[0]  # distinct for the training points
+        for idx in group:
+            z[idx] = 1 + color_idx
+        z = z.reshape((N, N))
+        cax = ax.contourf(xx1, xx2, z, levels=levels, colors=colors, extend='neither')
+        ax.contour(xx1, xx2, z, levels=0, colors=['black'], linewidths=0.5)
+
+    # remove ticks and frame. Also use the same x and y scaling
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    unique_k = list(unique_k)
+    unique_k[-1] = 'train'
+    # adjust colorbar ticks to show unnormalized values
+    cbar = fig.colorbar(cax, ticks=np.arange(len(colors)))
+    cbar.ax.set_yticklabels(unique_k, fontsize=12)
+
+    plt.axis('equal')
+    plt.savefig('images/experiment_2/linear_combinations_distinct_{}_grid_{}_freq.png'.format(N, freq), format='png')
+    plt.tight_layout()
+    plt.show()
 
     # GRADIENT COMBINATION PLOT
     # min-max normalize opts dictionary values
