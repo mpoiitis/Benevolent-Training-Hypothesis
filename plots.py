@@ -373,10 +373,10 @@ def plot_mnist_metrics(points, bs, epochs, lr):
         # calc stats
         mean_train_losses = np.mean(train_losses, axis=0)
         mean_test_losses = np.mean(test_losses, axis=0)
-        mean_trajectories = np.mean(trajectories, axis=0) / points
+        mean_trajectories = np.mean(trajectories, axis=0)
         std_train_losses = np.std(train_losses, axis=0)
         std_test_losses = np.std(test_losses, axis=0)
-        std_trajectories = np.std(trajectories, axis=0) / points
+        std_trajectories = np.std(trajectories, axis=0)
 
         # create the utmost dictionary for each corruption
         train_files[key] = {'mean': mean_train_losses, 'std': std_train_losses}
@@ -391,8 +391,8 @@ def plot_mnist_metrics(points, bs, epochs, lr):
     ax.set_ylabel('Train loss')
     # ax.set_ylim(-0.01, 0.15)
     # ax.set_yticks([0, 0.05, 0.1, 0.15])
-    ax.set_xticks([0, 100, 200, 300, 400])  # [0, 100, 200, 300, 400] for 1000, [0, 200, 400, 600, 800] for 2000, [0, 3000, 6000, 9000, 12000] for 6000
-    ax.set_xticklabels([0, 100 * 100, 200 * 100, 300 * 100, 400 * 100])
+    ax.set_xticks([0, 50, 100, 150, 200])
+    ax.set_xticklabels([0, 50 * 100, 100 * 100, 150 * 100, 200 * 100])
     ax.grid(axis='y')
     plt.legend(loc='upper right', ncol=1, frameon=False)
     plt.tight_layout()
@@ -405,10 +405,10 @@ def plot_mnist_metrics(points, bs, epochs, lr):
         ax.fill_between(np.arange(len(test_files[key]['mean'])), test_files[key]['mean'] - test_files[key]['std'], test_files[key]['mean'] + test_files[key]['std'], color=colors[idx], alpha=0.3)
     ax.set_xlabel('Iteration')
     ax.set_ylabel('Test loss')
-    ax.set_ylim(-0.01, 0.15)
-    ax.set_yticks([0, 0.05, 0.1, 0.15])
-    ax.set_xticks([0, 100, 200, 300])
-    ax.set_xticklabels([0, 100 * 120, 200 * 120, 300 * 120])  # * 120 for 1000, 2000 points
+    # ax.set_ylim(-0.01, 0.15)
+    # ax.set_yticks([0, 0.05, 0.1, 0.15])
+    ax.set_xticks([0, 50, 100, 150, 200])
+    ax.set_xticklabels([0, 50 * 100, 100 * 100, 150 * 100, 200 * 100])
     ax.grid(axis='y')
     plt.tight_layout()
     plt.savefig('images/experiment_3/test_loss.pdf', format='pdf')
@@ -416,18 +416,189 @@ def plot_mnist_metrics(points, bs, epochs, lr):
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
     for idx, key in enumerate(list(total_trajectories.keys())[::-1]):
-        ax.plot(total_trajectories[key]['mean'], label=''.format(key), color=colors[idx])
+        ax.plot(total_trajectories[key]['mean'], label='{}'.format(key), color=colors[idx])
         ax.fill_between(np.arange(len(total_trajectories[key]['mean'])), total_trajectories[key]['mean'] - total_trajectories[key]['std'], total_trajectories[key]['mean'] + total_trajectories[key]['std'], color=colors[idx], alpha=0.3)
-    ax.set_ylabel('Bias trajectory length (per epoch)')
+    ax.set_ylabel('Bias trajectory (per 100 iter)')
     ax.set_xlabel('Iteration')
-    ax.set_xticks([0, 5, 10, 15, 20])
-    ax.set_xticklabels([0, 5 * 200, 10 * 200, 15 * 200, 20 * 200])
+    ax.set_ylim(-0.01, 0.09)
+    ax.set_yticks([0, 0.02, 0.04, 0.06, 0.08])
+    ax.set_xticks([0, 50, 100, 150, 200])
+    ax.set_xticklabels([0, 50 * 100, 100 * 100, 150 * 100, 200 * 100])
     ax.grid(axis='y')
-    plt.legend(loc='upper left', ncol=1, frameon=False)
+    plt.legend(loc='upper right', ncol=1, frameon=False)
     plt.tight_layout()
     plt.savefig('images/experiment_3/trajectory.pdf', format='pdf')
     plt.show()
-# plot_mnist_metrics(1000, 1, 20, 0.0025)
+# plot_mnist_metrics(100, 1, 100, 0.002)
+
+
+def plot_batch_metrics(freqs):
+
+    freq_train = {}
+    freq_test = {}
+    freq_traj = {}
+    for freq in freqs:
+        train_files = {}
+        test_files = {}
+        dirs = ['pickles/experiment4/16/metrics/100_samples_{}_freq_3000_epochs'.format(freq), 'pickles/experiment4/32/metrics/100_samples_{}_freq_3000_epochs'.format(freq)]
+        for idx, dir in enumerate(dirs):
+            path, dirs, files = next(os.walk("{}".format(dir)))
+            if idx == 0:
+                key = '16'
+            else:
+                key = '32'
+            train_files[key] = [file for file in files if 'train_loss' in file]
+            test_files[key] = [file for file in files if 'test_loss' in file]
+
+        bias_files = {}
+        lr_files = {}
+        error_files = {}
+        dirs = ['pickles/experiment4/16/tracked_items/100_samples_{}_freq_3000_epochs'.format(freq), 'pickles/experiment4/32/tracked_items/100_samples_{}_freq_3000_epochs'.format(freq)]
+        for idx, dir in enumerate(dirs):
+            path, dirs, files = next(os.walk("{}".format(dir)))
+            if idx == 0:
+                key = '16'
+            else:
+                key = '32'
+            bias_files[key] = [file for file in files if 'b1' in file]
+            lr_files[key] = [file for file in files if 'lr' in file]
+            error_files[key] = [file for file in files if 'error' in file]
+
+        for key in train_files.keys():  # each iter different corruption
+            train_losses = []
+            test_losses = []
+            biases = []
+            lrs = []
+            errors = []
+            for i in tqdm(range(len(train_files[key]))):
+                train = pickle.load(open('pickles/experiment4/{}/metrics/100_samples_{}_freq_3000_epochs/train_loss_{}.pickle'.format(key, freq, i), 'rb'))
+                test = pickle.load(open('pickles/experiment4/{}/metrics/100_samples_{}_freq_3000_epochs/test_loss_{}.pickle'.format(key, freq, i), 'rb'))
+                bias = pickle.load(open('pickles/experiment4/{}/tracked_items/100_samples_{}_freq_3000_epochs/b1_{}'.format(key, freq, i), 'rb'))
+                lr = pickle.load(open('pickles/experiment4/{}/tracked_items/100_samples_{}_freq_3000_epochs/lr_{}'.format(key, freq, i), 'rb'))
+                error = pickle.load(open('pickles/experiment4/{}/tracked_items/100_samples_{}_freq_3000_epochs/error_{}'.format(key, freq, i), 'rb'))
+
+                # convert tensors to float
+                train = [float(i) for i in train]
+                test = [float(i) for i in test]
+
+                train = np.array(train)
+                test = np.array(test)
+
+                # append to iteration lists
+                train_losses.append(train)
+                test_losses.append(test)
+                biases.append(bias)
+                lrs.append(lr)
+                errors.append(error)
+
+            # convert to numpy for ease
+            train_losses = np.array(train_losses)
+            test_losses = np.array(test_losses)
+            biases = np.array(biases)
+            lrs = np.array(lrs)
+            errors = np.array(errors)
+
+            # calc stats
+            mean_train_losses = np.mean(train_losses, axis=0)
+            mean_test_losses = np.mean(test_losses, axis=0)
+            std_train_losses = np.std(train_losses, axis=0)
+            std_test_losses = np.std(test_losses, axis=0)
+            mean_biases = np.mean(biases, axis=0)
+            mean_lrs = np.mean(lrs, axis=0)
+            mean_errors = np.mean(errors, axis=0)
+
+            mean_train_losses = np.mean(mean_train_losses.reshape((-1, 100)), axis=1)
+            mean_train_losses = mean_train_losses.reshape(-1)
+            std_train_losses = np.mean(std_train_losses.reshape((-1, 100)), axis=1)
+            std_train_losses = std_train_losses.reshape(-1)
+            mean_test_losses = np.mean(mean_test_losses.reshape((-1, 100)), axis=1)
+            mean_test_losses = mean_test_losses.reshape(-1)
+            std_test_losses = np.mean(std_test_losses.reshape((-1, 100)), axis=1)
+            std_test_losses = std_test_losses.reshape(-1)
+
+            # create the utmost dictionary for each corruption
+            train_files[key] = {'mean': mean_train_losses, 'std': std_train_losses}
+            test_files[key] = {'mean': mean_test_losses, 'std': std_test_losses}
+            bias_files[key] = mean_biases
+            lr_files[key] = mean_lrs
+            error_files[key] = mean_errors
+
+        freq_train[freq] = train_files
+        freq_test[freq] = test_files
+        # METRIC CALCULATION
+        trajectory = {}
+        min_iters = 9999999
+        for key in bias_files.keys():
+            biases = bias_files[key]
+            lrs = lr_files[key]
+            avg_errors = error_files[key]
+
+            # trajectory
+            flat_biases = biases.reshape(-1, biases.shape[2])
+            flat_lrs = lrs.reshape(-1)[:-1]  # drop last one as diff calculates N-1 points
+            flat_avg_errors = avg_errors.reshape(-1)[:-1]  # same as above
+            traj = np.linalg.norm(np.diff(flat_biases, axis=0), axis=1) / (flat_lrs * flat_avg_errors)
+            iter_trajectory = np.empty(traj.shape[0] + 1)
+            iter_trajectory[:-1] = traj
+            iter_trajectory[-1] = traj[-1]  # repeat last entry for the meaningless diff
+            trajectory[key] = iter_trajectory
+
+            if min_iters > flat_lrs.shape[0]:
+                min_iters = flat_lrs.shape[0]
+
+        for key in bias_files.keys():
+            trajectory[key] = trajectory[key][:min_iters]
+        freq_traj[freq] = trajectory
+
+    plt.rcParams.update({'legend.fontsize': 12})
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    i = 0
+    for freq in freqs[::-1]:
+        for key in list(train_files.keys())[::-1]:
+            ax.plot(freq_train[freq][key]['mean'], label='freq={}, bs={}'.format(freq, key), color=colors[i])
+            ax.fill_between(np.arange(len(freq_train[freq][key]['mean'])), freq_train[freq][key]['mean'] - freq_train[freq][key]['std'], freq_train[freq][key]['mean'] + freq_train[freq][key]['std'], color=colors[i], alpha=0.3)
+            i += 1
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Train loss')
+    ax.set_xticks([0, 5, 10, 15, 20, 25, 30])
+    ax.set_xticklabels([0, 500, 1000, 1500, 2000, 2500, 3000])
+    ax.grid(axis='y')
+    plt.legend(loc='upper right', ncol=1, frameon=False)
+    plt.tight_layout()
+    plt.savefig('images/experiment_4/train_loss.pdf', format='pdf')
+    plt.show()
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    i = 0
+    for freq in freqs[::-1]:
+        for key in list(test_files.keys())[::-1]:
+            ax.plot(freq_test[freq][key]['mean'], label='freq={}, bs={}'.format(freq, key), color=colors[i])
+            ax.fill_between(np.arange(len(freq_test[freq][key]['mean'])), freq_test[freq][key]['mean'] - freq_test[freq][key]['std'], freq_test[freq][key]['mean'] + freq_test[freq][key]['std'], color=colors[i], alpha=0.3)
+            i += 1
+    ax.set_xlabel('Iteration')
+    ax.set_ylabel('Test loss')
+    ax.set_xticks([0, 5, 10, 15, 20, 25, 30])
+    ax.set_xticklabels([0, 500, 1000, 1500, 2000, 2500, 3000])
+    ax.grid(axis='y')
+    plt.tight_layout()
+    plt.savefig('images/experiment_4/test_loss.pdf', format='pdf')
+    plt.show()
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[7, 4.8])
+    i = 0
+    for freq in freqs[::-1]:
+        for key in list(trajectory.keys())[::-1]:
+            smoothed = smooth(freq_traj[freq][key])
+            ax.plot(smoothed, label='freq={}, bs={}'.format(freq, key), color=colors[i])
+            i += 1
+    ax.set_ylabel('Bias trajectory (per 100 iter)')
+    ax.set_xlabel('Iteration')
+    ax.grid(axis='y')
+    plt.legend(loc='upper left', ncol=1, frameon=False)
+    plt.tight_layout()
+    plt.savefig('images/experiment_4/trajectory.pdf', format='pdf')
+    plt.show()
+# plot_batch_metrics([0.25, 0.75])
 
 
 def adjacent_values(vals, q1, q3):

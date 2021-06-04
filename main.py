@@ -76,7 +76,7 @@ def run_mlp():
     model.to(device)
     if args.load_model:
         # LOAD MODEL
-        model.load_state_dict(torch.load('pickles/experiment2/models/{}_samples_{}_freq_{}_epochs_{}_lr/model_state_{}'.format(N, freq, args.epochs, args.lr, args.epochs-1)))
+        model.load_state_dict(torch.load('pickles/models/{}_samples_{}_freq_{}_epochs_{}_lr/model_state_{}'.format(N, freq, args.epochs, args.lr, args.epochs-1)))
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
         loss_fn = torch.nn.MSELoss()
@@ -95,7 +95,7 @@ def run_mlp():
         epoch_lipschitz = []
 
         # get file count. Find the last repeat of the same experiment to append number in the saved file name
-        directory = 'pickles/experiment2/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
+        directory = 'pickles/{}/metrics/{}_samples_{}_freq_{}_epochs'.format(args.bs, N, freq, args.epochs)
         file_count = get_file_count(directory, 'train_loss')
 
         for epoch in range(args.epochs):
@@ -164,19 +164,19 @@ def run_mlp():
 
             # SAVE MODEL STATE EVERY 100 EPOCHS
             if epoch % 100 == 0 or (epoch == args.epochs - 1):
-                directory = 'pickles/experiment2/models/{}_samples_{}_freq_{}_epochs_{}_lr/{}'.format(N, freq, args.epochs, args.lr, file_count)
+                directory = 'pickles/models/{}_samples_{}_freq_{}_epochs_{}_lr/{}'.format(N, freq, args.epochs, args.lr, file_count)
                 if not os.path.exists(directory):
                     os.makedirs(directory)
                 torch.save(model.state_dict(), '{}/model_state_{}'.format(directory, epoch))
 
-        directory = 'pickles/experiment2/tracked_items/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
+        directory = 'pickles/{}/tracked_items/{}_samples_{}_freq_{}_epochs'.format(args.bs, N, freq, args.epochs)
         if not os.path.exists(directory):
             os.makedirs(directory)
         pickle.dump(epoch_bias, open('{}/b1_{}'.format(directory, file_count), 'wb'))
         pickle.dump(epoch_lr, open('{}/lr_{}'.format(directory, file_count), 'wb'))
         pickle.dump(epoch_error, open('{}/error_{}'.format(directory, file_count), 'wb'))
         pickle.dump(epoch_lipschitz, open('{}/lipschitz_{}'.format(directory, file_count), 'wb'))
-        directory = 'pickles/experiment2/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, args.epochs)
+        directory = 'pickles/{}/metrics/{}_samples_{}_freq_{}_epochs'.format(args.bs, N, freq, args.epochs)
         if not os.path.exists(directory):
             os.makedirs(directory)
         pickle.dump(mean_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'))
@@ -356,7 +356,7 @@ def run_mnist_exp():
     custom_testset = CustomMNIST(root='./data', train=False, download=True, transform=transform, exclude_list=[0, 1, 2, 4, 5, 7, 8, 9])
 
     # keep specific number of samples
-    custom_trainset = keep_sample(custom_trainset, 1000)
+    custom_trainset = keep_sample(custom_trainset, 100)
     custom_testset = keep_sample(custom_testset, 900)
 
     trainloader = torch.utils.data.DataLoader(custom_trainset, batch_size=args.bs, shuffle=True)
@@ -467,9 +467,9 @@ def run_mnist_exp():
 
 if __name__ == '__main__':
     for i in tqdm(range(args.repeats)):
-        # if args.cnn:
-        #     run_cnn()
-        # else:
-        #     run_mlp()
+        if args.cnn:
+            run_cnn()
+        else:
+            run_mlp()
 
-        run_mnist_exp()
+        # run_mnist_exp()
