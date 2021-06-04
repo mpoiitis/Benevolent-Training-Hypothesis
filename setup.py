@@ -3,9 +3,9 @@ from setuptools import setup
 setup(
     # Needed to silence warnings (and to be a worthwhile package)
     name='Steady Learner Hypothesis',
-    url='https://github.com/mpoiitis/steady-learner-hypothesis',
-    author='Marinos Poiitis',
-    author_email='mpoiitis@csd.auth.gr',
+    url='https://anonymous.4open.science/r/steady-learner-hypothesis-00FC',
+    author='XXXX',
+    author_email='XXXX',
     # Needed to actually package something
     packages=['steadylearner'],
     # Needed for dependencies
