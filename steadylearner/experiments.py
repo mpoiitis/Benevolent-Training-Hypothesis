@@ -4,9 +4,8 @@ import pickle
 import joblib
 import numpy as np
 import torchvision.transforms as transforms
-from utils import CustomDataset, CustomCIFAR10, CustomMNIST, parse_args, get_file_count, corrupt_labels, keep_sample
-from models import MLP, CNN, CNN_MNIST, MLP_MNIST
-from tqdm import tqdm
+from steadylearner.utils import CustomDataset, CustomCIFAR10, CustomMNIST, parse_args, get_file_count, corrupt_labels, keep_sample
+from steadylearner.models import MLP, CNN, CNN_MNIST, MLP_MNIST
 
 
 args = parse_args()
@@ -463,13 +462,3 @@ def run_mnist_exp():
             os.makedirs(directory)
         joblib.dump(write_train_losses, open('{}/train_loss_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
         joblib.dump(write_test_losses, open('{}/test_loss_{}.pickle'.format(directory, file_count), 'wb'), compress=True)
-
-
-if __name__ == '__main__':
-    for i in tqdm(range(args.repeats)):
-        if args.cnn:
-            run_cnn()
-        else:
-            run_mlp()
-
-        # run_mnist_exp()

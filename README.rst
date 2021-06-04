@@ -5,6 +5,11 @@ This repository contains the necessary code to reproduce the experiments of the 
 ## Execution
 Python version: 3.6.8
 
+The command to install the package is:
+```
+python setup.py install
+```
+
 The experimental phase is based on two different models, an MLP and a CNN model. 
 For both models there is not any kind of normalization, only ReLU activation
 functions are used and the first layer's weights are frozen to Identity. This weight setup enables us
@@ -18,7 +23,7 @@ functions are used and the first layer's weights are frozen to Identity. This we
 The command to run the MLP-based experiments is:
 
 ```
-python main.py freq N epochs bs lr load-data load-model repeats
+steadylearner freq N epochs bs lr load-data load-model repeats
 ```
 
 where:
@@ -44,7 +49,7 @@ frequency and MLP2 class (models.py file)
 The command to run the CNN-based experiments is:
 
 ```
-python main.py -cnn corrupt epochs bs lr decay load-model repeats
+steadylearner -cnn corrupt epochs bs lr decay load-model repeats
 ```
 
 where:

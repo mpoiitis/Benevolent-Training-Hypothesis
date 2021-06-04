@@ -8,8 +8,8 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import LinearLocator
 import seaborn as sns
-from models import MLP2
-from utils import smooth, generate_cos_wave, CustomDataset, optimal_x_for_basis_pursuit, saturate
+from steadylearner.models import MLP2
+from steadylearner.utils import smooth, generate_cos_wave, CustomDataset, optimal_x_for_basis_pursuit, saturate
 import os
 from tqdm import tqdm
 
