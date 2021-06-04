@@ -77,9 +77,9 @@ plots.py is a file containing various plots used by the authors. These are not g
 rather fine-tuned plots towards specific needs, which can be run manually. You can use them for insights or build upon them.
 ## Authors
 
-* **Andreas Loukas, Ecole Polytechnique Fédérale de Lausanne**
-* **Marinos Poiitis, Aristotle University of Thessaloniki** [mpoiitis](https://github.com/mpoiitis)
-* **Stefanie Jegelka, Massachusetts Institute of Technology**
+* XXXX
+* XXXX
+* XXXX
 
 ## License
 

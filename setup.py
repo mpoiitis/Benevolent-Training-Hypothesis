@@ -16,7 +16,7 @@ setup(
     # *strongly* suggested for sharing
     version='0.1',
     # The license can be anything you like
-    license='MIT',
+    license='GNUv3',
     description='Source code of paper: Steady Learner - What trainining reveals about neural network complexity',
     # We will also need a readme eventually (there will be a warning)
     long_description=open('README.rst').read(),
