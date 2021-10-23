@@ -1,22 +1,50 @@
 # What training reveals about neural network complexity
 
-This repository contains the necessary code to reproduce the experiments of the corresponding paper.
+Investigating the relation between the complexity of a deep neural network's learned function and how its weights change during training. 
 
-## Execution
-Python version: 3.6.8
+The code accompanies paper [What training reveals about neural network complexity](https://arxiv.org/pdf/2106.04186.pdf) by Andreas Loukas published at NeurIPS/2021.
 
-The command to install the package is:
+## Paper abstract 
+This work explores the hypothesis that the complexity of the function a deep neural network (NN) is
+learning can be deduced by how fast its weights change during training. Our analysis provides evidence for
+this supposition by relating the network’s distribution of Lipschitz constants (i.e., the norm of the gradient
+at different regions of the input space) during different training intervals with the behavior of the stochastic
+training procedure. We first observe that the average Lipschitz constant close to the training data affects
+various aspects of the parameter trajectory, with more complex networks having a longer trajectory, bigger
+variance, and often veering further from their initialization. We then show that NNs whose biases are
+trained more steadily have bounded complexity even in regions of the input space that are far from any
+training point. Finally, we find that steady training with Dropout implies a training- and data-dependent
+generalization bound that grows poly-logarithmically with the number of parameters. Overall, our results
+support the hypothesis that good training behavior can be a useful bias towards good generalization.
+
+## Contents
+
+There are six files included under `steadylearner`:
+
+* `__init__.py`, the entry point, since code is packaged.
+* `command_line.py`, which invokes the requested experiment.
+* `experiments.py`, where the actual MLP/CNN and MNIST experiments are implemented.
+* `models.py` which contains all of the employed models.
+* `plots.py` which contains the necessary functions to produce the paper's plots.
+* `utils.py` with a variety of utility functions.
+
+
+Since the random seed is not fixed, some small variance should be expected in the experiment output.
+
+## Installation instructions: 
+
 ```
+git clone https://github.com/mpoiitis/steady-learner-hypothesis.git
+cd steady-learner-hypothesis
 python setup.py install
 ```
 
-The experimental phase is based on two different models, an MLP and a CNN model. 
-For both models there is not any kind of normalization, only ReLU activation
-functions are used and the first layer's weights are frozen to Identity. This weight setup enables us
- to avoid SVD computation on every step. Also: 
+Dependencies: numpy, scipy, seaborn, matplotlib, pandas, tqdm, torch (1.8.1+cu111), torchvision (0.9.1+cu111), torchaudio (0.8.1)
 
-- For the MLP, MSE loss is the objective with no activation on the output layer.
-- For the CNN, BCE loss is the objective with sigmoid as the activation of the output layer.
+## Execution
+
+The experimental phase is based on two different models, an MLP and a CNN model. 
+
 
 ### MLP execution
 
@@ -71,16 +99,30 @@ To reproduce the paper results for all experiments, the parameter values should 
  
 The experiments should run for a given corruption rate and MLP2 class (models.py file)
 
-### Plots
+## Citation
 
-plots.py is a file containing various plots used by the authors. These are not generic plots but 
-rather fine-tuned plots towards specific needs, which can be run manually. You can use them for insights or build upon them.
-## Authors
+If you use this code, please cite: 
+```
+@article{loukas2021training,
+  title={What training reveals about neural network complexity},
+  author={Loukas, Andreas and Poiitis, Marinos and Jegelka, Stefanie},
+  journal={arXiv preprint arXiv:2106.04186},
+  year={2021}
+}
+```
 
-* XXXX
-* XXXX
-* XXXX
+## Acknowledgements
 
-## License
+[comment]: <> (This work was kindly supported by the Swiss National Science Foundation &#40;grant number PZ00P2 179981&#41;. I would like to thank [Scott Gigante]&#40;https://cbb.yale.edu/people/scott-gigante&#41; for helping package the code.)
+
+15 May 2020
+
+[Andreas Loukas](https://andreasloukas.blog)
+
+[Marinos Poiitis](https://mpoiitis.github.io/)
+
+[Stefanie Jegelka](https://people.csail.mit.edu/stefje/)
+
+[comment]: <> ([![DOI]&#40;https://zenodo.org/badge/175851068.svg&#41;]&#40;https://zenodo.org/badge/latestdoi/175851068&#41;)
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details
