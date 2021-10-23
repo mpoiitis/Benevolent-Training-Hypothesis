@@ -16,6 +16,9 @@ device = torch.device("cuda")
 
 
 def run_mlp():
+    """
+        This is the main function through which the mlp experiments are executed
+    """
     if args.load_data:
         # LOAD DATA FROM PICKLES
         x = pickle.load(open('pickles/data/{}_samples_{}_freq_train_data.pickle'.format(N, freq), 'rb'))
@@ -185,6 +188,9 @@ def run_mlp():
 
 
 def run_cnn():
+    """
+        This is the main function through which the cnn experiments are executed
+    """
     # DATASET CREATION
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     # select only 2 classes, airplane and dog
@@ -348,6 +354,10 @@ def run_cnn():
 
 
 def run_mnist_exp():
+    """
+        This is the main function through which the MNIST experiments are executed. This is not accessible through the cmd arguments
+        since it is not part of the main experimentation. To run this, simply uncommented run_mnist_exp() in __init__.py and comment the main experiments
+    """
     # DATASET CREATION
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5), (0.5))])
     # select only 2 classes, airplane and dog

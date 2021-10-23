@@ -10,19 +10,19 @@ from scipy.optimize import linprog
 
 class CustomDataset(torch.utils.data.Dataset):
 
-  def __init__(self, x, y, device):
+    def __init__(self, x, y, device):
 
-    self.x = torch.tensor(x, dtype=torch.float32).to(device)
-    self.y = torch.tensor(y, dtype=torch.float32).to(device)
+        self.x = torch.tensor(x, dtype=torch.float32).to(device)
+        self.y = torch.tensor(y, dtype=torch.float32).to(device)
 
-  def __len__(self):
-    return len(self.x)  # required
+    def __len__(self):
+        return len(self.x)  # required
 
-  def __getitem__(self, idx):
-    if torch.is_tensor(idx):
-      idx = idx.tolist()
-    sample = (self.x[idx], self.y[idx])
-    return sample
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+        idx = idx.tolist()
+        sample = (self.x[idx], self.y[idx])
+        return sample
 
 
 class CustomCIFAR10(torchvision.datasets.CIFAR10):
@@ -55,7 +55,7 @@ class CustomCIFAR10(torchvision.datasets.CIFAR10):
 
 class CustomMNIST(torchvision.datasets.MNIST):
     """
-    This dataset keeps only the CIFAR10 classes that are not contained in the exclude_list argument.
+    This dataset keeps only the MNIST classes that are not contained in the exclude_list argument.
     This applies to both data and targets.
     """
     def __init__(self, *args, exclude_list=[], **kwargs):
@@ -100,6 +100,9 @@ def parse_args():
 
 
 def generate_cos_wave(freq, x, y):
+    """
+    Utility function to generate a cos wave according to the given arguments
+    """
     out = np.cos(2 * np.pi * freq * x) * np.cos(2 * np.pi * freq * y)
     return out
 
@@ -184,6 +187,9 @@ def alter(alist, col, factor=1.1):
 
 
 def rgb2hls(alist):
+    """
+    Color coding transformation
+    """
     alist = alist[:]
     for i, row in enumerate(alist):
         hls = colorsys.rgb_to_hls(row[0], row[1], row[2])
@@ -192,6 +198,9 @@ def rgb2hls(alist):
 
 
 def hls2rgb(alist):
+    """
+    Color coding transformation
+    """
     alist = alist[:]
     for i, row in enumerate(alist):
         hls = colorsys.hls_to_rgb(row[0], row[1], row[2])
@@ -200,6 +209,9 @@ def hls2rgb(alist):
 
 
 def saturate(alist, increase=0.2):
+    """
+    Image saturation
+    """
     factor = 1 + increase
     hls = rgb2hls(alist)
     new = alter(hls, 2, factor=factor)
@@ -208,6 +220,9 @@ def saturate(alist, increase=0.2):
 
 
 def keep_sample(dataset, N):
+    """
+    Simple sampling
+    """
     class_1_idx = np.argwhere(dataset.targets == 0).reshape(-1)
     class_2_idx = np.argwhere(dataset.targets == 1).reshape(-1)
     class_1_idx = class_1_idx[:N]

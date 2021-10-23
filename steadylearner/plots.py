@@ -20,6 +20,9 @@ colors = colormap(range(4))[::-1]
 
 
 def plot_data(surface, samples, freq, N, type='imshow'):
+    """
+    Data exploration plots
+    """
     colormap = sns.color_palette('RdYlGn_r', n_colors=100)
     colormap = saturate(colormap, 0.2)
     colormap = cm.colors.ListedColormap(sns.color_palette(colormap).as_hex())
@@ -52,7 +55,9 @@ def plot_data(surface, samples, freq, N, type='imshow'):
 
 
 def plot_metrics(mean_train_losses, mean_test_losses, avg_errors, N, bs):
-
+    """
+    Generic metric plot
+    """
     fig, ax1 = plt.subplots(nrows=1, ncols=1, figsize=(15, 10))
     ax1.plot(mean_train_losses, label='train')
     ax1.plot(mean_test_losses, label='test')
@@ -67,6 +72,9 @@ def plot_metrics(mean_train_losses, mean_test_losses, avg_errors, N, bs):
 
 
 def plot_spatial_error_distributon(model, dataset, surface, samples):
+    """
+    Exploration plots
+    """
     model.eval()
     y_pred = model(dataset.x)
     y_pred = torch.squeeze(y_pred)
@@ -83,10 +91,6 @@ def plot_spatial_error_distributon(model, dataset, surface, samples):
     ax.imshow(surface['f'], cmap=plt.cm.BrBG, interpolation='nearest', origin='lower', extent=[0, 1, 0, 1])
     for i in range(len(samples['x'])):
         ax.scatter(samples['x'][i], samples['y'][i], color=coolwarm(error[i]), s=40, zorder=10, edgecolors='black')
-    # sample_colors = []
-    # for i in range(len(samples['x'])):
-    #     sample_colors.append(colors[sorted_idx[i]])
-    # ax.scatter(samples['x'], samples['y'], color=sample_colors, s=40, zorder=10, edgecolors='black')
     cset = ax.contourf(surface['x'], surface['y'], surface['f'], 100, cmap=plt.cm.BrBG)
     plt.colorbar(cset)
     ax.set_xlabel('x')
@@ -101,6 +105,9 @@ def plot_spatial_error_distributon(model, dataset, surface, samples):
 
 
 def plot_freq_metrics(N, freqs, epochs):
+    """
+    Metrics related to frequency and thus cos wave experiments
+    """
     dirs = []
     for freq in freqs:
         dirs.append('pickles/experiment1/metrics/{}_samples_{}_freq_{}_epochs'.format(N, freq, epochs))
@@ -211,10 +218,12 @@ def plot_freq_metrics(N, freqs, epochs):
     plt.tight_layout()
     plt.savefig('images/experiment_1/mlp/test_error.pdf', format='pdf')
     plt.show()
-# plot_freq_metrics(100, [0.25, 0.5, 0.75, 1.0], 3000)
 
 
 def plot_corr_metrics(corrupts, bs, epochs, lr):
+    """
+    Metrics related to corruption and thus CIFAR experiments
+    """
     dirs = []
     for corr in corrupts:
         dirs.append('cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs_{}_lr'.format(corr, bs, epochs, lr))
@@ -325,10 +334,12 @@ def plot_corr_metrics(corrupts, bs, epochs, lr):
     plt.tight_layout()
     plt.savefig('images/experiment_1/cnn/test_error.pdf', format='pdf')
     plt.show()
-# plot_corr_metrics([0.0, 0.2, 0.4, 0.6], 1, 100, 0.0025)
 
 
 def plot_mnist_metrics(points, bs, epochs, lr):
+    """
+    Plots regarding MNIST experiment
+    """
     dirs = ['mnist_pickles/{}/metrics/mlp_0.0_corrupt_{}_bs_{}_epochs_{}_lr'.format(points, bs, epochs, lr), 'mnist_pickles/{}/metrics/cnn_0.0_corrupt_{}_bs_{}_epochs_{}_lr'.format(points, bs, epochs, lr)]
 
     train_files = {}
@@ -429,11 +440,12 @@ def plot_mnist_metrics(points, bs, epochs, lr):
     plt.tight_layout()
     plt.savefig('images/experiment_3/trajectory.pdf', format='pdf')
     plt.show()
-# plot_mnist_metrics(100, 1, 100, 0.002)
 
 
 def plot_batch_metrics(freqs):
-
+    """
+    Plots regarding the batch size experimentation
+    """
     freq_train = {}
     freq_test = {}
     freq_traj = {}
@@ -598,7 +610,6 @@ def plot_batch_metrics(freqs):
     plt.tight_layout()
     plt.savefig('images/experiment_4/trajectory.pdf', format='pdf')
     plt.show()
-# plot_batch_metrics([0.25, 0.75])
 
 
 def adjacent_values(vals, q1, q3):
@@ -612,8 +623,8 @@ def adjacent_values(vals, q1, q3):
 
 def plot_trajectory_variance_distance_mlp(N, freqs, epochs):
     """
-    for each epoch calculate the pairwise (pairs of iterations) sum of biases according to Theorem 1's formula
-    plot these statistics for each frequency
+    For each epoch calculates the pairwise (pairs of iterations) sum of biases according to Theorem 1's formula
+    and plots these statistics for each frequency
     """
     dirs = []
     for freq in freqs:
@@ -795,13 +806,12 @@ def plot_trajectory_variance_distance_mlp(N, freqs, epochs):
     plt.tight_layout()
     plt.savefig('images/experiment_1/mlp/lipschitz.pdf', format='pdf')
     plt.show()
-# plot_trajectory_variance_distance_mlp(100, [0.25, 0.5, 0.75, 1.0], 3000)
 
 
 def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs, lr):
     """
-    for each epoch calculate the pairwise (pairs of iterations) sum of biases according to Theorem 1's formula
-    plot these statistics for each frequency
+    For each epoch calculates the pairwise (pairs of iterations) sum of biases according to Theorem 1's formula
+    and plots these statistics for each frequency
     """
     dirs = []
     for corrupt in corrupts:
@@ -867,8 +877,6 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs, lr):
         ax.plot(list(total_integrals[corrupt]), label='corruption={}'.format(corrupt), color=colors[idx])
     ax.set_ylabel('Bias trajectory length (total)')
     ax.set_xlabel('Epoch')
-    # ax.set_ylim(-0.01, 0.71)
-    # ax.set_yticks([0, 0.2, 0.4, 0.6])
     ax.grid(axis='y')
     plt.legend(loc='upper left', ncol=1, frameon=False)
     plt.tight_layout()
@@ -880,7 +888,6 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs, lr):
     vplot = ax.violinplot(total_variances.values(), showmeans=False, showmedians=True, showextrema=False)
     ax.set_ylabel('Variance of bias (normalized)')
     ax.set_xlabel('Corruption rate')
-    # ax.set_yscale('log')
     ax.set_xticks(np.arange(1, len(corrupts) + 1))
     ax.set_xticklabels(corrupts)
     for patch, color in zip(vplot['bodies'], colors[::-1]):
@@ -907,10 +914,12 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs, lr):
     plt.tight_layout()
     plt.savefig('images/experiment_1/cnn/distance.pdf', format='pdf')
     plt.show()
-# plot_trajectory_variance_distance_cnn(10000, [0.0, 0.2, 0.4, 0.6], 1, 100, 0.0025)
 
 
 def plot_separate(corrupts, bs, epochs):
+    """
+    Creates separate and not grouped plots for easier incorporation in the latex/pdf document
+    """
     dirs = []
     for corr in corrupts:
         dirs.append('cnn_pickles/metrics/{}_corrupt_{}_bs_{}_epochs'.format(corr, bs, epochs))
@@ -967,10 +976,12 @@ def plot_separate(corrupts, bs, epochs):
         plt.title('Corruption: {}'.format(corr))
         plt.tight_layout()
         plt.show()
-# plot_separate([0.0, 0.2, 0.4, 0.6], 1, 100)
 
 
 def visualize_regions(N, freq):
+    """
+    Region plots presented in the appendix. A Basis pursuit optimization problem needs to be solved for the combinations problem which is computationally heavy.
+    """
     device = torch.device("cuda")
 
     x_train = pickle.load(open('pickles/data/200_samples_{}_freq_train_data.pickle'.format(freq), 'rb'))
@@ -1186,14 +1197,6 @@ def visualize_regions(N, freq):
         distances.update({point: k})
     print('With basis pursuit:{}'.format(np.unique(np.array(list(distances.values())))))
 
-    # # ENABLE THE BELOW IF YOU HAVE SAVED THE LP'S RESULTS, AS IT IS QUITE SLOW
-    # qs = pickle.load(open('pickles/lp_data/qs_from_lp_dict.pickle', 'rb'))
-    # opts = pickle.load(open('pickles/lp_data/opts_from_lp_dict.pickle', 'rb'))
-    # for point in res_points:
-    #     q = qs[point]
-    #     k = np.count_nonzero(q)
-    #     distances.update({point: k})
-
     # DISTINCTNESS COMBINATION PLOT
 
     # create colors for each unique distance
@@ -1321,4 +1324,3 @@ def visualize_regions(N, freq):
     plt.savefig('images/experiment_2/linear_combinations_gradient_{}_grid_{}_freq.png'.format(N, freq), format='png')
     plt.tight_layout()
     plt.show()
-# visualize_regions(200, 0.5)

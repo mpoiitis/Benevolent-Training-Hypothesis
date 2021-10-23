@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 
 
-# Model for experiment 1
 class MLP(nn.Module):
+    """
+        MLP model for experiment 1
+    """
     def __init__(self, in_dim, n):
         super(MLP, self).__init__()
         self.layers = nn.Sequential(
@@ -26,8 +28,10 @@ class MLP(nn.Module):
         return x
 
 
-# Model for experiment 2
 class MLP2(nn.Module):
+    """
+        MLP model for experiment 2
+    """
     def __init__(self, in_dim, n):
         super(MLP2, self).__init__()
         self.layers = nn.Sequential(
@@ -47,6 +51,9 @@ class MLP2(nn.Module):
 
 
 class MLP_MNIST(nn.Module):
+    """
+        MLP model for MNIST experiment
+    """
     def __init__(self):
         super(MLP_MNIST, self).__init__()
         self.layers = nn.Sequential(
@@ -68,6 +75,9 @@ class MLP_MNIST(nn.Module):
 
 
 class CNN(nn.Module):
+    """
+        CNN model for experiments 1 and 2
+    """
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(
@@ -96,8 +106,10 @@ class CNN(nn.Module):
         return x
 
 
-# CNN for MNIST experiment
 class CNN_MNIST(nn.Module):
+    """
+        CNN model for MNIST experiment
+    """
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(
