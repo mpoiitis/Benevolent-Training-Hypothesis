@@ -2,7 +2,7 @@
 
 Investigating the relation between the complexity of a deep neural network's learned function and how its weights change during training. 
 
-The code accompanies paper [What training reveals about neural network complexity](https://arxiv.org/pdf/2106.04186.pdf) by Andreas Loukas published at NeurIPS/2021.
+The code accompanies paper [What training reveals about neural network complexity](https://arxiv.org/pdf/2106.04186.pdf) by Andreas Loukas, Marinos Poiitis and Stefanie Jegelka published at NeurIPS/2021.
 
 ## Paper abstract 
 This work explores the hypothesis that the complexity of the function a deep neural network (NN) is
