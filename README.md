@@ -5,17 +5,11 @@ Investigating the relation between the complexity of a deep neural network's lea
 The code accompanies paper [What training reveals about neural network complexity](https://arxiv.org/pdf/2106.04186.pdf) by Andreas Loukas, Marinos Poiitis and Stefanie Jegelka published at NeurIPS/2021.
 
 ## Paper abstract 
-This work explores the hypothesis that the complexity of the function a deep neural network (NN) is
-learning can be deduced by how fast its weights change during training. Our analysis provides evidence for
-this supposition by relating the network’s distribution of Lipschitz constants (i.e., the norm of the gradient
-at different regions of the input space) during different training intervals with the behavior of the stochastic
-training procedure. We first observe that the average Lipschitz constant close to the training data affects
-various aspects of the parameter trajectory, with more complex networks having a longer trajectory, bigger
-variance, and often veering further from their initialization. We then show that NNs whose biases are
-trained more steadily have bounded complexity even in regions of the input space that are far from any
-training point. Finally, we find that steady training with Dropout implies a training- and data-dependent
-generalization bound that grows poly-logarithmically with the number of parameters. Overall, our results
-support the hypothesis that good training behavior can be a useful bias towards good generalization.
+
+This work explores the Benevolent Training Hypothesis (BTH) which argues that the complexity of the function a deep neural network (NN) is learning can be deduced by its training dynamics. Our analysis provides evidence for BTH by relating the NN's Lipschitz constant at different regions of the input space with the behavior of the stochastic training procedure. We first observe that the Lipschitz constant **close to the training data** affects various aspects of the parameter trajectory, with more complex networks having a longer trajectory, bigger variance, and often veering further from their initialization. We then show that NNs whose 1st layer bias is trained more steadily (i.e., slowly and with little variation) have bounded complexity even in regions of the input space that are **far from any training point**. Finally, we find that steady training with Dropout implies a training- and data-dependent generalization bound that grows *poly-logarithmically* with the number of parameters. Overall, our results support the intuition that good training behavior can be a useful bias towards good generalization.
+
+![image](https://user-images.githubusercontent.com/10616026/138603180-2ee32fe1-9727-4e66-9b5b-a867a49a3dbb.png)
+
 
 ## Contents
 
@@ -103,11 +97,13 @@ The experiments should run for a given corruption rate and MLP2 class (models.py
 
 If you use this code, please cite: 
 ```
-@article{loukas2021training,
-  title={What training reveals about neural network complexity},
-  author={Loukas, Andreas and Poiitis, Marinos and Jegelka, Stefanie},
-  journal={arXiv preprint arXiv:2106.04186},
-  year={2021}
+@inproceedings{Loukas2021Training,
+      title={What training reveals about neural network complexity}, 
+      author={Andreas Loukas and Marinos Poiitis and Stefanie Jegelka},
+      year={2021},
+      booktitle={Neural Information Processing Systems},
+      series={NeurIPS},
+      url={https://arxiv.org/abs/2106.04186}
 }
 ```
 
@@ -117,11 +113,7 @@ If you use this code, please cite:
 
 [comment]: <> (26 October 2021)
 
-[Andreas Loukas](https://andreasloukas.blog)
-
-[Marinos Poiitis](https://mpoiitis.github.io/)
-
-[Stefanie Jegelka](https://people.csail.mit.edu/stefje/)
+[Andreas Loukas](https://andreasloukas.blog), [Marinos Poiitis](https://mpoiitis.github.io/), [Stefanie Jegelka](https://people.csail.mit.edu/stefje/)
 
 [comment]: <> ([![DOI]&#40;https://zenodo.org/badge/175851068.svg&#41;]&#40;https://zenodo.org/badge/latestdoi/175851068&#41;)
 
