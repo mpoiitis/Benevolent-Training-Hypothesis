@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class MLP(nn.Module):
     """
-        MLP model for experiment 1
+        MLP model used in the main experiments regarding train/test loss, bias trajectory, distance to initialization and variance
     """
     def __init__(self, in_dim, n):
         super(MLP, self).__init__()
@@ -30,7 +30,7 @@ class MLP(nn.Module):
 
 class MLP2(nn.Module):
     """
-        MLP model for experiment 2
+        MLP model used in the experiments regarding activation regions
     """
     def __init__(self, in_dim, n):
         super(MLP2, self).__init__()
@@ -52,7 +52,7 @@ class MLP2(nn.Module):
 
 class MLP_MNIST(nn.Module):
     """
-        MLP model for MNIST experiment
+        MLP model used in the MNIST experiment
     """
     def __init__(self):
         super(MLP_MNIST, self).__init__()
@@ -76,7 +76,7 @@ class MLP_MNIST(nn.Module):
 
 class CNN(nn.Module):
     """
-        CNN model for experiments 1 and 2
+        CNN model used in all experiments apart from MNIST
     """
     def __init__(self):
         super().__init__()
