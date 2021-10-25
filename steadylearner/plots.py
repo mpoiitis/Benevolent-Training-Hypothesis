@@ -218,6 +218,7 @@ def plot_freq_metrics(N, freqs, epochs):
     plt.tight_layout()
     plt.savefig('images/experiment_1/mlp/test_error.pdf', format='pdf')
     plt.show()
+# plot_freq_metrics(100, [0.25, 0.5, 0.75, 1.0], 3000)
 
 
 def plot_corr_metrics(corrupts, bs, epochs, lr):
@@ -334,6 +335,7 @@ def plot_corr_metrics(corrupts, bs, epochs, lr):
     plt.tight_layout()
     plt.savefig('images/experiment_1/cnn/test_error.pdf', format='pdf')
     plt.show()
+# plot_corr_metrics([0.0, 0.2, 0.4, 0.6], 1, 100, 0.0025)
 
 
 def plot_mnist_metrics(points, bs, epochs, lr):
@@ -440,6 +442,7 @@ def plot_mnist_metrics(points, bs, epochs, lr):
     plt.tight_layout()
     plt.savefig('images/experiment_3/trajectory.pdf', format='pdf')
     plt.show()
+# plot_mnist_metrics(100, 1, 100, 0.002)
 
 
 def plot_batch_metrics(freqs):
@@ -610,6 +613,7 @@ def plot_batch_metrics(freqs):
     plt.tight_layout()
     plt.savefig('images/experiment_4/trajectory.pdf', format='pdf')
     plt.show()
+# plot_batch_metrics([0.25, 0.75])
 
 
 def adjacent_values(vals, q1, q3):
@@ -806,6 +810,7 @@ def plot_trajectory_variance_distance_mlp(N, freqs, epochs):
     plt.tight_layout()
     plt.savefig('images/experiment_1/mlp/lipschitz.pdf', format='pdf')
     plt.show()
+# plot_trajectory_variance_distance_mlp(100, [0.25, 0.5, 0.75, 1.0], 3000)
 
 
 def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs, lr):
@@ -914,6 +919,7 @@ def plot_trajectory_variance_distance_cnn(N, corrupts, bs, epochs, lr):
     plt.tight_layout()
     plt.savefig('images/experiment_1/cnn/distance.pdf', format='pdf')
     plt.show()
+# plot_trajectory_variance_distance_cnn(10000, [0.0, 0.2, 0.4, 0.6], 1, 100, 0.0025)
 
 
 def plot_separate(corrupts, bs, epochs):
@@ -976,6 +982,7 @@ def plot_separate(corrupts, bs, epochs):
         plt.title('Corruption: {}'.format(corr))
         plt.tight_layout()
         plt.show()
+# plot_separate([0.0, 0.2, 0.4, 0.6], 1, 100)
 
 
 def visualize_regions(N, freq):
@@ -1324,3 +1331,4 @@ def visualize_regions(N, freq):
     plt.savefig('images/experiment_2/linear_combinations_gradient_{}_grid_{}_freq.png'.format(N, freq), format='png')
     plt.tight_layout()
     plt.show()
+# visualize_regions(200, 0.5)
