@@ -113,6 +113,6 @@ This work was kindly supported by the Swiss National Science Foundation (grant n
 
 [Andreas Loukas](https://andreasloukas.blog), [Marinos Poiitis](https://mpoiitis.github.io/), [Stefanie Jegelka](https://people.csail.mit.edu/stefje/)
 
-[comment]: <> ([![DOI]&#40;https://zenodo.org/badge/175851068.svg&#41;]&#40;https://zenodo.org/badge/latestdoi/175851068&#41;)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5596032.svg)](https://doi.org/10.5281/zenodo.5596032)
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details
