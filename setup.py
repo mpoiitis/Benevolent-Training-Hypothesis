@@ -14,7 +14,7 @@ setup(
         'console_scripts': ['steadylearner=steadylearner.command_line:main'],
     },
     # *strongly* suggested for sharing
-    version='0.1',
+    version='1.0',
     # The license can be anything you like
     license='GNUv3',
     description='Source code of paper: What training reveals about neural network complexity',
