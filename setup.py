@@ -4,8 +4,8 @@ setup(
     # Needed to silence warnings (and to be a worthwhile package)
     name='Benevolent Training Hypothesis',
     url='https://github.com/mpoiitis/Benevolent-Training-Hypothesis',
-    author='XXXX',
-    author_email='XXXX',
+    author='Marinos Poiitis',
+    author_email='marinospoet@gmail.com',
     # Needed to actually package something
     packages=['steadylearner'],
     # Needed for dependencies
